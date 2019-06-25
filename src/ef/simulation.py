@@ -174,44 +174,24 @@ class Simulation(SerializableH5):
         if (current_step % step_to_save) == 0:
             self.write()
 
-    def write(self):
-        file_name_to_write = self.construct_output_filename(
-            self._output_filename_prefix, self.time_grid.current_node,
-            self._output_filename_suffix)
+    def _write(self, specific_name):
+        file_name_to_write = self._output_filename_prefix + specific_name + self._output_filename_suffix
         h5file = h5py.File(file_name_to_write, mode="w")
         if not h5file:
             print("Error: can't open file " + file_name_to_write + \
-                  "to save results of initial field calculation!")
+                  "to save results!")
             print("Recheck \'output_filename_prefix\' key in config file.")
             print("Make sure the directory you want to save to exists.")
-            print("Writing initial fields to file " + file_name_to_write)
-        print("Writing step {} to file {}".format(self.time_grid.current_node, file_name_to_write))
+        print("Writing to file {}".format(file_name_to_write))
         self.save_h5(h5file)
         h5file.close()
 
-    @staticmethod
-    def construct_output_filename(output_filename_prefix,
-                                  current_time_step,
-                                  output_filename_suffix):
-        filename = output_filename_prefix + \
-                   "{:07d}".format(current_time_step) + \
-                   output_filename_suffix
-        return filename
+    def write(self):
+        print("Writing step {} to file".format(self.time_grid.current_node))
+        self._write("{:07}".format(self.time_grid.current_node))
 
     def eval_and_write_fields_without_particles(self):
         self.spat_mesh.clear_old_density_values()
         self.eval_potential_and_fields()
-        file_name_to_write = self._output_filename_prefix + "fieldsWithoutParticles" + self._output_filename_suffix
-        h5file = h5py.File(file_name_to_write, mode="w")
-        if not h5file:
-            print("Error: can't open file " + file_name_to_write + \
-                  "to save results of initial field calculation!")
-            print("Recheck \'output_filename_prefix\' key in config file.")
-            print("Make sure the directory you want to save to exists.")
-            print("Writing initial fields to file " + file_name_to_write)
-        h5file.attrs['class'] = self.__class__.__name__
-        self._save_value(h5file, "spat_mesh", self.spat_mesh)
-        self._save_value(h5file, "electric_fields", self.electric_fields)
-        self._save_value(h5file, "magnetic_fields", self.magnetic_fields)
-        self._save_value(h5file, "inner_regions", self.inner_regions)
-        h5file.close()
+        print("Writing initial fields to file")
+        self._write("fieldsWithoutParticles")
