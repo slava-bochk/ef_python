@@ -2,11 +2,11 @@ import math
 
 import numpy as np
 
-from ef.external_field import ExternalField
+from ef.field import Field
 from simpleeval import SimpleEval
 
 
-class ExternalFieldExpression(ExternalField):
+class FieldExpression(Field):
 
     def __init__(self, name, electric_or_magnetic, expression_x, expression_y, expression_z):
         super().__init__(name, electric_or_magnetic)

@@ -5,8 +5,8 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 
-from ef.external_field_expression import ExternalFieldExpression
-from ef.external_field_uniform import ExternalFieldUniform
+from ef.field.expression import FieldExpression
+from ef.field.uniform import FieldUniform
 from ef.field.solvers.field_solver import FieldSolver
 from ef.inner_region import InnerRegion
 from ef.particle_array import ParticleArray
@@ -63,8 +63,8 @@ class TestSimulation:
         assert sim.particle_sources == [ParticleSourceConf('a', Box()).make(),
                                         ParticleSourceConf('c', Cylinder()).make(),
                                         ParticleSourceConf('d', Tube()).make()]
-        assert sim.electric_fields == [ExternalFieldUniform('x', 'electric', np.array((-2, -2, 1)))]
-        assert sim.magnetic_fields == [ExternalFieldExpression('y', 'magnetic', '0', '0', '3*x + sqrt(y) - z**2')]
+        assert sim.electric_fields == [FieldUniform('x', 'electric', np.array((-2, -2, 1)))]
+        assert sim.magnetic_fields == [FieldExpression('y', 'magnetic', '0', '0', '3*x + sqrt(y) - z**2')]
         assert sim.particle_interaction_model == ParticleInteractionModel("binary")
         assert sim._output_filename_prefix == "out_"
         assert sim._output_filename_suffix == ".h5"

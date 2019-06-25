@@ -1,4 +1,4 @@
-from ef import external_field_on_grid
+from ef.field import on_grid
 
 __all__ = ["ExternalFieldFromFileConf", "ExternalFieldFromFileSection"]
 
@@ -20,7 +20,7 @@ class ExternalFieldFromFileConf(FieldConf):
         return ExternalFieldFromFileSection(self.name, self.electric_or_magnetic, self.filename)
 
     def make(self):
-        return external_field_on_grid.ExternalFieldOnGrid(self.name, self.electric_or_magnetic, self.filename)
+        return on_grid.FieldOnGrid(self.name, self.electric_or_magnetic, self.filename)
 
 
 class ExternalFieldFromFileSection(NamedConfigSection):
