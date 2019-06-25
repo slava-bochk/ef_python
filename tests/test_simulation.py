@@ -118,3 +118,19 @@ class TestSimulation:
         assert len(sim.particle_arrays) == 2
         assert_array_equal(sim.particle_arrays[0].ids, range(50))
         assert_array_equal(sim.particle_arrays[1].ids, range(50, 100))
+
+    def test_write(self, monkeypatch, tmpdir, mocker):
+        monkeypatch.chdir(tmpdir)
+        conf = Config(TimeGridConf(0.001, save_step=.0005, step=0.0001), SpatialMeshConf((10, 10, 10), (1, 1, 1)),
+                      sources=[ParticleSourceConf('gas', Box((4, 4, 4), size=(1, 1, 1)), 50, 0, np.zeros(3), 0.00),
+                               ParticleSourceConf('gas2', Box((5, 5, 5), size=(1, 1, 1)), 50, 0, np.zeros(3), 0.00)],
+                      particle_interaction_model=ParticleInteractionModelConf('noninteracting')
+                      )
+        sim = conf.make()
+        sim.write()
+        assert tmpdir.join('out_0000000.h5').exists()
+        sim.time_grid.update_to_next_step()
+        sim.time_grid.update_to_next_step()
+        sim.write()
+        assert not tmpdir.join('out_0000001.h5').exists()
+        assert tmpdir.join('out_0000002.h5').exists()
