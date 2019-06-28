@@ -1,9 +1,12 @@
+from collections import defaultdict
+
 import h5py
 import numpy as np
 
 from ef.field import FieldZero, FieldSum
 from ef.field.particles import FieldParticles
 from ef.field.solvers.field_solver import FieldSolver
+from ef.particle_array import ParticleArray
 from ef.util.serializable_h5 import SerializableH5
 
 
@@ -86,6 +89,7 @@ class Simulation(SerializableH5):
             self.eval_charge_density()
             self.eval_potential_and_fields()
         self.shift_new_particles_velocities_half_time_step_back()
+        self.consolidate_particle_arrays()
 
     def generate_valid_particles(self, initial=False):
         # First generate then remove.
@@ -187,3 +191,15 @@ class Simulation(SerializableH5):
         self.eval_potential_and_fields()
         print("Writing initial fields to file")
         self._write("fieldsWithoutParticles")
+
+    def consolidate_particle_arrays(self):
+        particles_by_type = defaultdict(list)
+        for p in self.particle_arrays:
+            particles_by_type[(p.mass, p.charge, p.momentum_is_half_time_step_shifted)].append(p)
+        self.particle_arrays = []
+        for k, v in particles_by_type.items():
+            mass, charge, shifted = k
+            ids = np.concatenate([p.ids for p in v])
+            positions = np.concatenate([p.positions for p in v])
+            momentums = np.concatenate([p.momentums for p in v])
+            self.particle_arrays.append(ParticleArray(ids, charge, mass, positions, momentums, shifted))

@@ -114,9 +114,8 @@ class TestSimulation:
         assert len(sim.particle_arrays) == 0
         sim.start_pic_simulation()
         assert len(sim.particle_sources) == 2
-        assert len(sim.particle_arrays) == 2
-        assert_array_equal(sim.particle_arrays[0].ids, range(50))
-        assert_array_equal(sim.particle_arrays[1].ids, range(50, 100))
+        assert len(sim.particle_arrays) == 1
+        assert_array_equal(sim.particle_arrays[0].ids, range(100))
 
     def test_write(self, monkeypatch, tmpdir, mocker):
         monkeypatch.chdir(tmpdir)
@@ -144,4 +143,4 @@ class TestSimulation:
                       external_fields=[])
         sim = conf.make()
         sim.start_pic_simulation()
-        assert [len(a.ids) for a in sim.particle_arrays] == [2, 1, 1]
+        assert [len(a.ids) for a in sim.particle_arrays] == [4]
