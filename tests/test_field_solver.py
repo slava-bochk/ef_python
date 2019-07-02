@@ -24,18 +24,18 @@ class TestFieldSolver:
         assert_array_equal(mesh.electric_field, expected)
 
     def test_global_index(self):
-        double_index = list(FieldSolver.double_index(np.array((9, 10, 6))))
+        double_index = FieldSolver.double_index(np.array((9, 10, 6)))
         for i in range(7):
             for j in range(8):
                 for k in range(4):
                     n = i + j * 7 + k * 7 * 8
-                    assert double_index[n] == (n, i + 1, j + 1, k + 1)
-        assert list(FieldSolver.double_index(np.array((4, 5, 3)))) == [(0, 1, 1, 1),
-                                                                       (1, 2, 1, 1),
-                                                                       (2, 1, 2, 1),
-                                                                       (3, 2, 2, 1),
-                                                                       (4, 1, 3, 1),
-                                                                       (5, 2, 3, 1)]
+                    assert tuple(double_index[n]) == (n, i + 1, j + 1, k + 1)
+        assert_array_equal(FieldSolver.double_index(np.array((4, 5, 3))), [(0, 1, 1, 1),
+                                                                           (1, 2, 1, 1),
+                                                                           (2, 1, 2, 1),
+                                                                           (3, 2, 2, 1),
+                                                                           (4, 1, 3, 1),
+                                                                           (5, 2, 3, 1)])
 
     def test_init_rhs(self):
         mesh = SpatialMeshConf((4, 3, 3)).make(BoundaryConditionsConf())
