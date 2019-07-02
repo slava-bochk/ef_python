@@ -1,5 +1,4 @@
 from ef.field import Field
-import numpy as np
 
 
 class FieldUniform(Field):
@@ -9,8 +8,3 @@ class FieldUniform(Field):
 
     def get_at_points(self, positions, time):
         return self.uniform_field_vector
-
-
-class FieldZero(FieldUniform):
-    def __init__(self, name, electric_or_magnetic):
-        super().__init__(name, electric_or_magnetic, np.zeros(3))

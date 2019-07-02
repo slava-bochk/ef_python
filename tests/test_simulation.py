@@ -5,16 +5,18 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 
+from ef.config.components import *
+from ef.config.config import Config
+from ef.field import FieldZero
 from ef.field.expression import FieldExpression
-from ef.field.uniform import FieldUniform
 from ef.field.solvers.field_solver import FieldSolver
+from ef.field.uniform import FieldUniform
 from ef.inner_region import InnerRegion
 from ef.particle_array import ParticleArray
 from ef.particle_interaction_model import ParticleInteractionModel
+from ef.simulation import Simulation
 from ef.spatial_mesh import SpatialMesh
 from ef.time_grid import TimeGrid
-from ef.config.components import *
-from ef.config.config import Config
 
 
 class TestSimulation:
@@ -28,8 +30,8 @@ class TestSimulation:
         assert sim.inner_regions == []
         assert type(sim._field_solver) == FieldSolver
         assert sim.particle_sources == []
-        assert sim.electric_fields == []
-        assert sim.magnetic_fields == []
+        assert sim.electric_fields == FieldZero('ZeroSum', 'electric')
+        assert sim.magnetic_fields == FieldZero('ZeroSum', 'magnetic')
         assert sim.particle_interaction_model == ParticleInteractionModel("PIC")
         assert sim._output_filename_prefix == "out_"
         assert sim._output_filename_suffix == ".h5"
@@ -63,8 +65,8 @@ class TestSimulation:
         assert sim.particle_sources == [ParticleSourceConf('a', Box()).make(),
                                         ParticleSourceConf('c', Cylinder()).make(),
                                         ParticleSourceConf('d', Tube()).make()]
-        assert sim.electric_fields == [FieldUniform('x', 'electric', np.array((-2, -2, 1)))]
-        assert sim.magnetic_fields == [FieldExpression('y', 'magnetic', '0', '0', '3*x + sqrt(y) - z**2')]
+        assert sim.electric_fields == FieldUniform('x', 'electric', np.array((-2, -2, 1)))
+        assert sim.magnetic_fields == FieldExpression('y', 'magnetic', '0', '0', '3*x + sqrt(y) - z**2')
         assert sim.particle_interaction_model == ParticleInteractionModel("binary")
         assert sim._output_filename_prefix == "out_"
         assert sim._output_filename_suffix == ".h5"
