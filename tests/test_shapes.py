@@ -1,9 +1,19 @@
+from math import sqrt
+
 import numpy as np
 from numpy.random import RandomState
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_equal, assert_array_almost_equal
 
 from ef.config.components import Cylinder, Tube
-from ef.config.components.shapes import Box, Sphere
+from ef.config.components.shapes import Box, Sphere, rotation_from_z
+
+
+def test_rotation_from_z():
+    r2 = 1 / sqrt(2)
+    assert_array_almost_equal(rotation_from_z(np.array([1, 0, 0])), [r2, 0, r2, 0])
+    assert_array_almost_equal(rotation_from_z(np.array([0, 1, 0])), [r2, -r2, 0, 0])
+    assert_array_almost_equal(rotation_from_z(np.array([1, 1, 0])), [r2, -0.5, 0.5, 0])
+    assert_array_almost_equal(rotation_from_z(np.array([0, 0, 1])), [1, 0, 0, 0])
 
 
 def test_box_positions_in():

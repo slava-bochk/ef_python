@@ -32,7 +32,7 @@ def rotation_from_z(vector):
     cos = np.sqrt((1 + cos2) / 2)
     sin = np.sqrt((1 - cos2) / 2)
     axis = np.cross((0, 0, 1), vector)
-    vector_component = (axis / norm(axis)) * sin
+    vector_component = np.zeros(3) if norm(axis) == 0 else (axis / norm(axis)) * sin
     return np.concatenate(([cos], vector_component))
 
 
