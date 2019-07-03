@@ -50,11 +50,9 @@ class MeshGrid(SerializableH5):
         nf = nodes_to_update.reshape((-1, 3))  # (np*8, 3)
         wz = wf[wf > 0]
         nz = nf[wf > 0]
-        # df = pd.DataFrame.from_dict({'coords': nodes_to_update, 'weight': weight_on_nodes})
-        if np.any(np.logical_or(nz >= self.n_nodes, nz < 0)):
+        if np.any((nz >= self.n_nodes) | (nz < 0)):
             raise ValueError("Position is out of meshgrid bounds")
-        for i in range(len(wz)):
-            result[tuple(nz[i])] += wz[i] * density
+        np.add.at(result, tuple(nz.transpose()), wz * density)
         return result
 
     def interpolate_field_at_positions(self, field, positions):
