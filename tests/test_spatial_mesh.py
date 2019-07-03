@@ -3,11 +3,11 @@ import logging
 import h5py
 import numpy as np
 import pytest
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_equal, assert_array_almost_equal
 
+from ef.config.components import SpatialMeshConf, BoundaryConditionsConf
 from ef.particle_array import ParticleArray
 from ef.spatial_mesh import SpatialMesh, MeshGrid
-from ef.config.components import SpatialMeshConf, BoundaryConditionsConf, ParticleSourceConf
 
 
 class TestDefaultSpatialMesh:
@@ -152,6 +152,19 @@ class TestDefaultSpatialMesh:
         assert_array_equal(d["charge_density"], np.zeros((3, 3, 2)))
 
     def test_weight_particles_charge_to_mesh(self):
+        mesh = SpatialMeshConf((1, 1, 1), (1, 1, 1)).make(BoundaryConditionsConf())
+        particle_arrays = [ParticleArray(range(1000), charge=8, mass=1,
+                                         positions=np.full((1000, 3), 0.5), momentums=np.zeros((1000, 3)))]
+        mesh.weight_particles_charge_to_mesh(particle_arrays)
+        assert_array_equal(mesh.charge_density, np.full((2, 2, 2), 1000))
+        mesh.clear_old_density_values()
+
+        particle_arrays = [ParticleArray(range(1000), charge=1, mass=1,
+                                         positions=np.full((1000, 3), 0.1), momentums=np.zeros((1000, 3)))]
+        mesh.weight_particles_charge_to_mesh(particle_arrays)
+        assert_array_almost_equal(mesh.charge_density, [[[729, 81], [81, 9]],
+                                                        [[81, 9], [9, 1]]])
+
         mesh = SpatialMeshConf((2, 4, 8), (1, 2, 4)).make(BoundaryConditionsConf())
         particle_arrays = [ParticleArray(1, -2, 4, [(1, 1, 3)], [(0, 0, 0)])]
         mesh.weight_particles_charge_to_mesh(particle_arrays)
