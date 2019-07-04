@@ -31,16 +31,17 @@ class FieldSolver:
         diag_offset = 1
         block_size = nx
         block = scipy.sparse.diags([1.0, -2.0, 1.0], [-diag_offset, 0, diag_offset], shape=(block_size, block_size),
-                                   format='csr')
-        return scipy.sparse.block_diag([block] * (ny * nz))
+                                   format='coo')
+        big_block = scipy.sparse.block_diag([block] * nz, format='coo')
+        return scipy.sparse.block_diag([big_block] * ny, format='csr')
 
     @staticmethod
     def construct_d2dy2_in_3d(nx, ny, nz):
         diag_offset = nx
         block_size = nx * ny
         block = scipy.sparse.diags([1.0, -2.0, 1.0], [-diag_offset, 0, diag_offset], shape=(block_size, block_size),
-                                   format='csr')
-        return scipy.sparse.block_diag([block] * nz)
+                                   format='coo')
+        return scipy.sparse.block_diag([block] * nz, format='csr')
 
     @staticmethod
     def construct_d2dz2_in_3d(nx, ny, nz):
