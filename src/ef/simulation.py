@@ -1,9 +1,12 @@
+from collections import defaultdict
+
 import h5py
 import numpy as np
 
 from ef.field import FieldZero, FieldSum
 from ef.field.particles import FieldParticles
 from ef.field.solvers.field_solver import FieldSolver
+from ef.particle_array import ParticleArray
 from ef.util.serializable_h5 import SerializableH5
 
 
@@ -48,12 +51,7 @@ class Simulation(SerializableH5):
 
     def start_pic_simulation(self):
         self.eval_and_write_fields_without_particles()
-        for src in self.particle_sources:
-            particles = src.generate_initial_particles()
-            if len(particles.ids):
-                particles.ids = self.generate_particle_ids(len(particles.ids))
-                self.particle_arrays.append(particles)
-        self.prepare_recently_generated_particles_for_boris_integration()
+        self.generate_and_prepare_particles(initial=True)
         self.write_step_to_save()
         self.run_pic()
 
@@ -69,18 +67,9 @@ class Simulation(SerializableH5):
             self.advance_one_time_step()
             self.write_step_to_save()
 
-    def prepare_recently_generated_particles_for_boris_integration(self):
-        if self.particle_interaction_model.pic:
-            self.eval_charge_density()
-            self.eval_potential_and_fields()
-        self.shift_new_particles_velocities_half_time_step_back()
-
     def advance_one_time_step(self):
         self.push_particles()
-        self.apply_domain_constrains()
-        if self.particle_interaction_model.pic:
-            self.eval_charge_density()
-            self.eval_potential_and_fields()
+        self.generate_and_prepare_particles()
         self.update_time_grid()
 
     def eval_charge_density(self):
@@ -94,10 +83,18 @@ class Simulation(SerializableH5):
     def push_particles(self):
         self.boris_integration(self.time_grid.time_step_size)
 
-    def apply_domain_constrains(self):
+    def generate_and_prepare_particles(self, initial=False):
+        self.generate_valid_particles(initial)
+        if self.particle_interaction_model.pic:
+            self.eval_charge_density()
+            self.eval_potential_and_fields()
+        self.shift_new_particles_velocities_half_time_step_back()
+        self.consolidate_particle_arrays()
+
+    def generate_valid_particles(self, initial=False):
         # First generate then remove.
         # This allows for overlap of source and inner region.
-        self.generate_new_particles()
+        self.generate_new_particles(initial)
         self.apply_domain_boundary_conditions()
         self.remove_particles_inside_inner_regions()
 
@@ -152,13 +149,12 @@ class Simulation(SerializableH5):
         return np.logical_or(np.any(particle.positions < 0, axis=-1),
                              np.any(particle.positions > self.spat_mesh.size, axis=-1))
 
-    def generate_new_particles(self):
+    def generate_new_particles(self, initial=False):
         for src in self.particle_sources:
-            particles = src.generate_each_step()
+            particles = src.generate_initial_particles() if initial else src.generate_each_step()
             if len(particles.ids):
                 particles.ids = self.generate_particle_ids(len(particles.ids))
                 self.particle_arrays.append(particles)
-        self.shift_new_particles_velocities_half_time_step_back()
 
     def generate_particle_ids(self, num_of_particles):
         range_of_ids = range(self.max_id + 1, self.max_id + num_of_particles + 1)
@@ -195,3 +191,15 @@ class Simulation(SerializableH5):
         self.eval_potential_and_fields()
         print("Writing initial fields to file")
         self._write("fieldsWithoutParticles")
+
+    def consolidate_particle_arrays(self):
+        particles_by_type = defaultdict(list)
+        for p in self.particle_arrays:
+            particles_by_type[(p.mass, p.charge, p.momentum_is_half_time_step_shifted)].append(p)
+        self.particle_arrays = []
+        for k, v in particles_by_type.items():
+            mass, charge, shifted = k
+            ids = np.concatenate([p.ids for p in v])
+            positions = np.concatenate([p.positions for p in v])
+            momentums = np.concatenate([p.momentums for p in v])
+            self.particle_arrays.append(ParticleArray(ids, charge, mass, positions, momentums, shifted))

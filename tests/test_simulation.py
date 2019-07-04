@@ -14,7 +14,6 @@ from ef.field.uniform import FieldUniform
 from ef.inner_region import InnerRegion
 from ef.particle_array import ParticleArray
 from ef.particle_interaction_model import ParticleInteractionModel
-from ef.simulation import Simulation
 from ef.spatial_mesh import SpatialMesh
 from ef.time_grid import TimeGrid
 
@@ -115,9 +114,8 @@ class TestSimulation:
         assert len(sim.particle_arrays) == 0
         sim.start_pic_simulation()
         assert len(sim.particle_sources) == 2
-        assert len(sim.particle_arrays) == 2
-        assert_array_equal(sim.particle_arrays[0].ids, range(50))
-        assert_array_equal(sim.particle_arrays[1].ids, range(50, 100))
+        assert len(sim.particle_arrays) == 1
+        assert_array_equal(sim.particle_arrays[0].ids, range(100))
 
     def test_write(self, monkeypatch, tmpdir, mocker):
         monkeypatch.chdir(tmpdir)
@@ -134,3 +132,15 @@ class TestSimulation:
         sim.write()
         assert not tmpdir.join('out_0000001.h5').exists()
         assert tmpdir.join('out_0000002.h5').exists()
+
+    def test_particle_generation(self, mocker):
+        conf = Config(TimeGridConf(2, 1, 1), SpatialMeshConf((5, 5, 5), (.1, .1, .1)),
+                      sources=[ParticleSourceConf('a', Box((2, 2, 2), (0, 0, 0)), 2, 1, (0, 0, 0), 0, charge=0),
+                               ParticleSourceConf('b', Box((1, 1, 1), (0, 0, 0)), 7, 5, (0, 0, 0), 0, charge=0)],
+                      inner_regions=[InnerRegionConf('1', Box((.5, .5, .5), (1, 1, 1)))],
+                      output_file=OutputFileConf(), boundary_conditions=BoundaryConditionsConf(),
+                      particle_interaction_model=ParticleInteractionModelConf('noninteracting'),
+                      external_fields=[])
+        sim = conf.make()
+        sim.start_pic_simulation()
+        assert [len(a.ids) for a in sim.particle_arrays] == [4]
