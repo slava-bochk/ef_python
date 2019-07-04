@@ -1,7 +1,9 @@
 import h5py
 import numpy as np
 
+from ef.field.particles import FieldParticles
 from ef.field.solvers.field_solver import FieldSolver
+from ef.field import FieldZero, FieldSum
 from ef.util.serializable_h5 import SerializableH5
 
 
@@ -16,13 +18,27 @@ class Simulation(SerializableH5):
         self.inner_regions = inner_regions
         self._field_solver = FieldSolver(spat_mesh, inner_regions)
         self.particle_sources = particle_sources
-        self.electric_fields = electric_fields
-        self.magnetic_fields = magnetic_fields
+        self.electric_fields = FieldSum.factory(electric_fields, 'electric')
+        self.magnetic_fields = FieldSum.factory(magnetic_fields, 'magnetic')
         self.particle_interaction_model = particle_interaction_model
+        self.particle_arrays = list(particle_arrays)
+
+        if self.particle_interaction_model.binary:
+            self._dynamic_field = FieldParticles('binary_particle_field', self.particle_arrays)
+            if self.inner_regions or not self.spat_mesh.is_potential_equal_on_boundaries():
+                self._dynamic_field += self.spat_mesh
+        elif self.particle_interaction_model.noninteracting:
+            if self.inner_regions or not self.spat_mesh.is_potential_equal_on_boundaries():
+                self._dynamic_field = self.spat_mesh
+            else:
+                self._dynamic_field = FieldZero('Uniform_potential_zero_field', 'electric')
+        else:
+            self._dynamic_field = self.spat_mesh
+
         self._output_filename_prefix = output_filename_prefix
         self._output_filename_suffix = outut_filename_suffix
         self.max_id = max_id
-        self.particle_arrays = list(particle_arrays)
+
 
     @classmethod
     def init_from_h5(cls, h5file, filename_prefix, filename_suffix):
@@ -90,7 +106,7 @@ class Simulation(SerializableH5):
         for particles in self.particle_arrays:
             total_el_field, total_mgn_field = \
                 self.compute_total_fields_at_positions(particles.positions)
-            if total_mgn_field is not None and total_mgn_field.any():
+            if self.magnetic_fields != 0 and total_mgn_field.any():
                 particles.boris_update_momentums(dt, total_el_field, total_mgn_field)
             else:
                 particles.boris_update_momentum_no_mgn(dt, total_el_field)
@@ -102,28 +118,16 @@ class Simulation(SerializableH5):
             if not particles.momentum_is_half_time_step_shifted:
                 total_el_field, total_mgn_field = \
                     self.compute_total_fields_at_positions(particles.positions)
-                if total_mgn_field is not None and total_mgn_field.any():
+                if self.magnetic_fields != 0 and total_mgn_field.any():
                     particles.boris_update_momentums(minus_half_dt, total_el_field, total_mgn_field)
                 else:
                     particles.boris_update_momentum_no_mgn(minus_half_dt, total_el_field)
                 particles.momentum_is_half_time_step_shifted = True
 
     def compute_total_fields_at_positions(self, positions):
-        total_el_field = np.zeros_like(positions)  # make sure shape is set, as += operators can't broadcast left side
-        total_el_field += sum(f.get_at_points(positions, self.time_grid.current_time) for f in self.electric_fields)
-        if self.particle_interaction_model.noninteracting:
-            if self.inner_regions or not self.spat_mesh.is_potential_equal_on_boundaries():
-                total_el_field += self.spat_mesh.field_at_position(positions)
-        elif self.particle_interaction_model.binary:
-            total_el_field += self.binary_electric_field_at_positions(positions)
-            if self.inner_regions or not self.spat_mesh.is_potential_equal_on_boundaries():
-                total_el_field += self.spat_mesh.field_at_position(positions)
-        elif self.particle_interaction_model.pic:
-            total_el_field += self.spat_mesh.field_at_position(positions)
-        mgn_field = None
-        if self.magnetic_fields:
-            mgn_field = sum(f.get_at_points(positions, self.time_grid.current_time) for f in self.magnetic_fields)
-        return total_el_field, mgn_field
+        total_el_field = self.electric_fields + self._dynamic_field
+        return total_el_field.get_at_points(positions, self.time_grid.current_time), \
+               self.magnetic_fields.get_at_points(positions, self.time_grid.current_time)
 
     def binary_electric_field_at_positions(self, positions):
         return sum(

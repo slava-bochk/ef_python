@@ -2,11 +2,11 @@ import os.path
 
 import numpy as np
 
-from ef.external_field import ExternalField
+from ef.field import Field
 from ef.spatial_mesh import MeshGrid
 
 
-class ExternalFieldOnGrid(ExternalField):
+class FieldOnGrid(Field):
 
     def __init__(self, name, electric_or_magnetic, field_filename):
         super().__init__(name, electric_or_magnetic)

@@ -1,4 +1,4 @@
-from ef import external_field_uniform
+from ef.field import uniform
 
 __all__ = ["ExternalFieldUniformConf", "ExternalFieldUniformSection"]
 
@@ -22,7 +22,7 @@ class ExternalFieldUniformConf(FieldConf):
         return ExternalFieldUniformSection(self.name, self.electric_or_magnetic, *self.field)
 
     def make(self):
-        return external_field_uniform.ExternalFieldUniform(self.name, self.electric_or_magnetic, self.field)
+        return uniform.FieldUniform(self.name, self.electric_or_magnetic, self.field)
 
 class ExternalFieldUniformSection(NamedConfigSection):
     section = "ExternalFieldUniform"

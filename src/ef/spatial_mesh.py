@@ -80,6 +80,9 @@ class MeshGrid(SerializableH5):
 
 
 class SpatialMesh(SerializableH5):
+    electric_or_magnetic = 'electric'
+    name = 'spatial_mesh'
+
     def __init__(self, mesh, charge_density, potential, electric_field):
         self.mesh = mesh
         self.charge_density = charge_density
@@ -146,6 +149,9 @@ class SpatialMesh(SerializableH5):
 
     def field_at_position(self, positions):
         return self.mesh.interpolate_field_at_positions(self.electric_field, positions)
+
+    def get_at_points(self, positions, time):
+        return self.field_at_position(positions)
 
     def clear_old_density_values(self):
         self.charge_density.fill(0)
