@@ -1,9 +1,9 @@
 import h5py
 import numpy as np
 
+from ef.field import FieldZero, FieldSum
 from ef.field.particles import FieldParticles
 from ef.field.solvers.field_solver import FieldSolver
-from ef.field import FieldZero, FieldSum
 from ef.util.serializable_h5 import SerializableH5
 
 
@@ -38,7 +38,6 @@ class Simulation(SerializableH5):
         self._output_filename_prefix = output_filename_prefix
         self._output_filename_suffix = outut_filename_suffix
         self.max_id = max_id
-
 
     @classmethod
     def init_from_h5(cls, h5file, filename_prefix, filename_suffix):
@@ -133,18 +132,9 @@ class Simulation(SerializableH5):
         return sum(
             np.nan_to_num(p.field_at_points(positions)) for p in self.particle_arrays)
 
-    #
-    # Push particles
-    #
-
     def shift_new_particles_velocities_half_time_step_back(self):
         minus_half_dt = -1.0 * self.time_grid.time_step_size / 2.0
-        #
         self.prepare_boris_integration(minus_half_dt)
-
-    #
-    # Apply domain constrains
-    #
 
     def apply_domain_boundary_conditions(self):
         for arr in self.particle_arrays:
@@ -175,16 +165,8 @@ class Simulation(SerializableH5):
         self.max_id += num_of_particles
         return np.array(range_of_ids)
 
-    #
-    # Update time grid
-    #
-
     def update_time_grid(self):
         self.time_grid.update_to_next_step()
-
-    #
-    # Write domain to file
-    #
 
     def write_step_to_save(self):
         current_step = self.time_grid.current_node
@@ -192,55 +174,24 @@ class Simulation(SerializableH5):
         if (current_step % step_to_save) == 0:
             self.write()
 
-    def write(self):
-        file_name_to_write = self.construct_output_filename(
-            self._output_filename_prefix, self.time_grid.current_node,
-            self._output_filename_suffix)
+    def _write(self, specific_name):
+        file_name_to_write = self._output_filename_prefix + specific_name + self._output_filename_suffix
         h5file = h5py.File(file_name_to_write, mode="w")
         if not h5file:
             print("Error: can't open file " + file_name_to_write + \
-                  "to save results of initial field calculation!")
+                  "to save results!")
             print("Recheck \'output_filename_prefix\' key in config file.")
             print("Make sure the directory you want to save to exists.")
-            print("Writing initial fields to file " + file_name_to_write)
-        print("Writing step {} to file {}".format(self.time_grid.current_node, file_name_to_write))
+        print("Writing to file {}".format(file_name_to_write))
         self.save_h5(h5file)
         h5file.close()
 
-    @staticmethod
-    def construct_output_filename(output_filename_prefix,
-                                  current_time_step,
-                                  output_filename_suffix):
-        filename = output_filename_prefix + \
-                   "{:07d}".format(current_time_step) + \
-                   output_filename_suffix
-        return filename
-
-    #
-    # Free domain
-    #
-
-    def free(self):
-        print("TODO: free domain.\n")
-
-    #
-    # Various functions
-    #
+    def write(self):
+        print("Writing step {} to file".format(self.time_grid.current_node))
+        self._write("{:07}".format(self.time_grid.current_node))
 
     def eval_and_write_fields_without_particles(self):
         self.spat_mesh.clear_old_density_values()
         self.eval_potential_and_fields()
-        file_name_to_write = self._output_filename_prefix + "fieldsWithoutParticles" + self._output_filename_suffix
-        h5file = h5py.File(file_name_to_write, mode="w")
-        if not h5file:
-            print("Error: can't open file " + file_name_to_write + \
-                  "to save results of initial field calculation!")
-            print("Recheck \'output_filename_prefix\' key in config file.")
-            print("Make sure the directory you want to save to exists.")
-            print("Writing initial fields to file " + file_name_to_write)
-        h5file.attrs['class'] = self.__class__.__name__
-        self._save_value(h5file, "spat_mesh", self.spat_mesh)
-        self._save_value(h5file, "electric_fields", self.electric_fields)
-        self._save_value(h5file, "magnetic_fields", self.magnetic_fields)
-        self._save_value(h5file, "inner_regions", self.inner_regions)
-        h5file.close()
+        print("Writing initial fields to file")
+        self._write("fieldsWithoutParticles")
