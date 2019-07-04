@@ -1,7 +1,7 @@
 import logging
-from itertools import product
 
 import numpy as np
+from scipy.interpolate import RegularGridInterpolator
 
 from ef.util.serializable_h5 import SerializableH5
 
@@ -38,22 +38,24 @@ class MeshGrid(SerializableH5):
         density = value / volume_around_node  # scalar
         result = np.zeros(self.n_nodes)
         pos = positions - self.origin
+        if np.any((pos > self.size) | (pos < 0)):
+            raise ValueError("Position is out of meshgrid bounds")
         nodes, remainders = np.divmod(pos, self.cell)  # (np, 3)
         nodes = nodes.astype(int)  # (np, 3)
         weights = remainders / self.cell  # (np, 3)
-        w = np.stack([1. - weights, weights], axis=-2)  # (np, 2, 3)
-        dn = np.array(list(product((0, 1), repeat=3)))  # (8, 3)
-        weight_on_nodes = w[:, dn[:, (0, 1, 2)], (0, 1, 2)].prod(-1)  # (np, 8)
-        nodes_to_update = nodes[:, np.newaxis] + dn[np.newaxis, :]  # (np, 8, 3)
-        wf = weight_on_nodes.flatten()  # (np*8)
-        nf = nodes_to_update.reshape((-1, 3))  # (np*8, 3)
-        wz = wf[wf > 0]
-        nz = nf[wf > 0]
-        # df = pd.DataFrame.from_dict({'coords': nodes_to_update, 'weight': weight_on_nodes})
-        if np.any(np.logical_or(nz >= self.n_nodes, nz < 0)):
-            raise ValueError("Position is out of meshgrid bounds")
-        for i in range(len(wz)):
-            result[tuple(nz[i])] += wz[i] * density
+        for dx in (0, 1):
+            wx = weights[:, 0] if dx else 1. - weights[:, 0]  # np
+            for dy in (0, 1):
+                wy = weights[:, 1] if dy else 1. - weights[:, 1]  # np
+                wxy = wx * wy  # np
+                for dz in (0, 1):
+                    wz = weights[:, 2] if dz else 1. - weights[:, 2]  # np
+                    w = wxy * wz  # np
+                    dn = dx, dy, dz
+                    nodes_to_update = nodes + dn  # (np, 3)
+                    w_nz = w[w > 0]
+                    n_nz = nodes_to_update[w > 0]
+                    np.add.at(result, tuple(n_nz.transpose()), w_nz * density)
         return result
 
     def interpolate_field_at_positions(self, field, positions):
@@ -64,19 +66,24 @@ class MeshGrid(SerializableH5):
         :param positions: array of shape (np, 3)
         :return: array of shape (np, {F})
         """
-        node, remainder = np.divmod(positions - self.origin, self.cell)
-        node = node.astype(int)  # shape is (p, 3)
-        weight = remainder / self.cell  # shape is (np, 3)
-        w = np.stack([1. - weight, weight], axis=-2)  # shape is (np, 2, 3)
-        dn = np.array(list(product((0, 1), repeat=3)))  # shape is (8, 3)
-        nodes_to_use = node[..., np.newaxis, :] + dn  # shape is (np, 8, 3)
-        field_indexes = np.moveaxis(nodes_to_use, -1, 0)  # shape is (3, np, 8)
-        out_of_bounds = np.logical_or(nodes_to_use >= self.n_nodes, nodes_to_use < 0).any(axis=-1)  # (np, 8)
-        field_on_nodes = np.empty((*field.shape[3:], len(positions), 8))  # (F, np, 8)
-        field_on_nodes[..., out_of_bounds] = 0  # (F, np, 8) interpolate out-of-bounds field as 0
-        field_on_nodes[..., ~out_of_bounds] = field[tuple(field_indexes[:, ~out_of_bounds])].transpose()  # sorry...
-        weight_on_nodes = w[..., dn[:, (0, 1, 2)], (0, 1, 2)].prod(-1)  # shape is (np, 8)
-        return np.moveaxis((field_on_nodes * weight_on_nodes).sum(axis=-1), -1, 0)  # shape is (np, F)
+        xyz = tuple(np.linspace(self.origin[i], self.origin[i] + self.size[i], self.n_nodes[i]) for i in (0, 1, 2))
+        interpolator = RegularGridInterpolator(xyz, field, bounds_error=False, fill_value=0)
+        return interpolator(positions)
+        #
+        # node, remainder = np.divmod(positions - self.origin, self.cell)
+        # node = node.astype(int)  # shape is (p, 3)
+        # wx, wy, wz = (remainder / self.cell).transpose()
+        # field_on_nodes = np.zeros((*field.shape[3:], len(positions)))  # (F, np)
+        # for dn in product((0, 1), repeat=3):
+        #     dx, dy, dz = dn
+        #     nodes_to_use = node + dn  # (np, 3)
+        #     out_of_bounds = np.logical_or(nodes_to_use >= self.n_nodes, nodes_to_use < 0).any(axis=-1)  # (np)
+        #     field_this_cycle = np.zeros((*field.shape[3:], len(positions)))  # (F, np)
+        #     field_this_cycle[..., ~out_of_bounds] = field[
+        #         tuple(nodes_to_use[~out_of_bounds].transpose())].transpose()  # sorry...
+        #     weight_on_nodes = (wx if dx else 1. - wx) * (wy if dy else 1. - wy) * (wz if dz else 1. - wz)
+        #     field_on_nodes += field_this_cycle * weight_on_nodes
+        # return field_on_nodes.transpose()
 
 
 class SpatialMesh(SerializableH5):

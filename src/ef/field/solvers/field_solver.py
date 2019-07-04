@@ -31,16 +31,17 @@ class FieldSolver:
         diag_offset = 1
         block_size = nx
         block = scipy.sparse.diags([1.0, -2.0, 1.0], [-diag_offset, 0, diag_offset], shape=(block_size, block_size),
-                                   format='csr')
-        return scipy.sparse.block_diag([block] * (ny * nz))
+                                   format='coo')
+        big_block = scipy.sparse.block_diag([block] * nz, format='coo')
+        return scipy.sparse.block_diag([big_block] * ny, format='csr')
 
     @staticmethod
     def construct_d2dy2_in_3d(nx, ny, nz):
         diag_offset = nx
         block_size = nx * ny
         block = scipy.sparse.diags([1.0, -2.0, 1.0], [-diag_offset, 0, diag_offset], shape=(block_size, block_size),
-                                   format='csr')
-        return scipy.sparse.block_diag([block] * nz)
+                                   format='coo')
+        return scipy.sparse.block_diag([block] * nz, format='csr')
 
     @staticmethod
     def construct_d2dz2_in_3d(nx, ny, nz):
@@ -51,16 +52,19 @@ class FieldSolver:
 
     def zero_nondiag_for_nodes_inside_objects(self, matrix, mesh, inner_regions):
         for ir in inner_regions:
-            for n, i, j, k in self._double_index:
-                xyz = mesh.cell * (i, j, k)
-                if ir.check_if_points_inside(xyz):
-                    csr_row_start = matrix.indptr[n]
-                    csr_row_end = matrix.indptr[n + 1]
-                    for t in range(csr_row_start, csr_row_end):
-                        if matrix.indices[t] != n:
-                            matrix.data[t] = 0
-                        else:
-                            matrix.data[t] = 1
+            ijk = self._double_index[:, 1:]
+            n = self._double_index[:, 0]
+            xyz = mesh.cell * ijk
+            mask = ir.check_if_points_inside(xyz)
+            n = n[mask]
+            for i in n:
+                csr_row_start = matrix.indptr[i]
+                csr_row_end = matrix.indptr[i + 1]
+                for t in range(csr_row_start, csr_row_end):
+                    if matrix.indices[t] != i:
+                        matrix.data[t] = 0
+                    else:
+                        matrix.data[t] = 1
         return matrix
 
     def create_solver_and_preconditioner(self):
@@ -101,10 +105,11 @@ class FieldSolver:
 
     def set_rhs_for_nodes_inside_objects(self, spat_mesh, inner_regions):
         for ir in inner_regions:
-            for n, i, j, k in self._double_index:
-                xyz = spat_mesh.cell * (i, j, k)
-                if ir.check_if_points_inside(xyz):
-                    self.rhs[n] = ir.potential  # where is dx**2 dy**2 etc?
+            ijk = self._double_index[:, 1:]
+            n = self._double_index[:, 0]
+            xyz = spat_mesh.cell * ijk
+            mask = ir.check_if_points_inside(xyz)
+            self.rhs[n[mask]] = ir.potential
 
     def transfer_solution_to_spat_mesh(self, spat_mesh):
         spat_mesh.potential[1:-1, 1:-1, 1:-1] = self.phi_vec.reshape(spat_mesh.n_nodes - 2, order='F')
@@ -117,5 +122,5 @@ class FieldSolver:
     @staticmethod
     def double_index(n_nodes):
         nx, ny, nz = n_nodes - 2
-        return [(i + j * nx + k * nx * ny, i + 1, j + 1, k + 1)
-                for k in range(nz) for j in range(ny) for i in range(nx)]
+        return np.array([(i + j * nx + k * nx * ny, i + 1, j + 1, k + 1)
+                         for k in range(nz) for j in range(ny) for i in range(nx)])
