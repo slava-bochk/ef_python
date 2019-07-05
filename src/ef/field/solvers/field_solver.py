@@ -1,6 +1,5 @@
-from logging import warning
-
 import numpy as np
+import pyamg
 import scipy.sparse
 import scipy.sparse.linalg
 
@@ -22,8 +21,8 @@ class FieldSolver:
         cx, cy, cz = spat_mesh.cell ** 2
         dx, dy, dz = cy * cz, cx * cz, cx * cy
         matrix = dx * self.construct_d2dx2_in_3d(nx, ny, nz) + \
-            dy * self.construct_d2dy2_in_3d(nx, ny, nz) + \
-            dz * self.construct_d2dz2_in_3d(nx, ny, nz)
+                 dy * self.construct_d2dy2_in_3d(nx, ny, nz) + \
+                 dz * self.construct_d2dz2_in_3d(nx, ny, nz)
         return self.zero_nondiag_for_nodes_inside_objects(matrix, spat_mesh, inner_regions)
 
     @staticmethod
@@ -70,6 +69,7 @@ class FieldSolver:
     def create_solver_and_preconditioner(self):
         self.maxiter = 1000
         self.tol = 1e-10
+        self._solver = pyamg.ruge_stuben_solver(self.A)
         # abstol = 0
         # verbose = true
         # monitor(rhs, iteration_limit, rtol, abstol, verbose)
@@ -80,11 +80,7 @@ class FieldSolver:
 
     def solve_poisson_eqn(self, spat_mesh, inner_regions):
         self.init_rhs_vector(spat_mesh, inner_regions)
-        # cusp::krylov::cg(A, phi_vec, rhs, monitor, precond)
-        self.phi_vec, info = scipy.sparse.linalg.cg(self.A, self.rhs, self.phi_vec,
-                                                    self.tol, self.maxiter)
-        if info != 0:
-            warning(f"scipy.sparse.linalg.cg info: {info}")
+        self.phi_vec = self._solver.solve(self.rhs, x0=self.phi_vec, tol=self.tol, maxiter=self.maxiter)
         self.transfer_solution_to_spat_mesh(spat_mesh)
 
     def init_rhs_vector(self, spat_mesh, inner_regions):
