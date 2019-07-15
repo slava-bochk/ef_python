@@ -28,11 +28,13 @@ def rotation_from_z(vector):
     :param vector: Any non-zero 3-component vector
     :return: Array of length 4 with the rotation quaternion
     """
+    axis = np.cross((0, 0, 1), vector)
+    if norm(axis) == 0:
+        return np.array((1, 0, 0, 0))
     cos2 = (vector / norm(vector))[2]
     cos = np.sqrt((1 + cos2) / 2)
     sin = np.sqrt((1 - cos2) / 2)
-    axis = np.cross((0, 0, 1), vector)
-    vector_component = np.zeros(3) if norm(axis) == 0 else (axis / norm(axis)) * sin
+    vector_component = axis / norm(axis) * sin
     return np.concatenate(([cos], vector_component))
 
 
@@ -128,7 +130,7 @@ class Sphere(Shape):
 
     def generate_uniform_random_posititons(self, random_state, n):
         while True:
-            p = random_state.uniform(0, 1, (n * 2, 3)) * self.r + self.origin
+            p = random_state.uniform(-1, 1, (n * 2, 3)) * self.r + self.origin
             p = p.compress(self.are_positions_inside(p), 0)
             if len(p) > n:
                 return p[:n]

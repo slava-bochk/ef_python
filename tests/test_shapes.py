@@ -102,11 +102,67 @@ def test_tube_positions_in():
 
 
 def test_generate_positions():
-    for cls in Box, Sphere, Cylinder, Tube:
-        shape = cls()
-        for i in range(1000):
-            point = shape.generate_uniform_random_position(RandomState(0))
-            assert shape.are_positions_inside(point)
+    shape = Box()
+    num_points = 500000
+    decimals = 2
+    points = shape.generate_uniform_random_posititons(RandomState(0), num_points)
+    assert shape.are_positions_inside(points).all()
+    assert_array_almost_equal(points.mean(axis=0), (0.5, 0.5, 0.5), decimals)
+    assert_array_almost_equal(np.median(points, axis=0), (0.5, 0.5, 0.5), decimals)
+    assert_array_almost_equal(points.std(axis=0), (1 / sqrt(12), 1 / sqrt(12), 1 / sqrt(12)), decimals)
+    assert_array_almost_equal(points.min(axis=0), (0, 0, 0), decimals)
+    assert_array_almost_equal(points.max(axis=0), (1, 1, 1), decimals)
+    assert_array_almost_equal(np.cov(points.transpose()), [[1 / 12, 0, 0],
+                                                           [0, 1 / 12, 0],
+                                                           [0, 0, 1 / 12]], decimals)
+    shape = Cylinder()
+    points = shape.generate_uniform_random_posititons(RandomState(0), num_points)
+    assert shape.are_positions_inside(points).all()
+    assert_array_almost_equal(points.mean(axis=0), (0.5, 0, 0), decimals)
+    assert_array_almost_equal(np.median(points, axis=0), (0.5, 0, 0), decimals)
+    assert_array_almost_equal(points.std(axis=0), (1 / sqrt(12), .5, .5), decimals)
+    assert_array_almost_equal(points.min(axis=0), (0, -1, -1), decimals)
+    assert_array_almost_equal(points.max(axis=0), (1, 1, 1), decimals)
+    print(np.cov(points.transpose()))
+    assert_array_almost_equal(np.cov(points.transpose()), [[1 / 12, 0, 0],
+                                                           [0, 1 / 4, 0],
+                                                           [0, 0, 1 / 4]], decimals)
 
-        points = shape.generate_uniform_random_posititons(RandomState(0), 100000)
-        assert shape.are_positions_inside(points).all()
+    shape = Cylinder((0, 0, 0), (0, 0, 1), 1)
+    points = shape.generate_uniform_random_posititons(RandomState(0), num_points)
+    assert shape.are_positions_inside(points).all()
+    assert_array_almost_equal(points.mean(axis=0), (0, 0, 0.5), decimals)
+    assert_array_almost_equal(np.median(points, axis=0), (0, 0, 0.5), decimals)
+    assert_array_almost_equal(points.std(axis=0), (.5, .5, 1 / sqrt(12)), decimals)
+    assert_array_almost_equal(points.min(axis=0), (-1, -1, 0), decimals)
+    assert_array_almost_equal(points.max(axis=0), (1, 1, 1), decimals)
+    print(np.cov(points.transpose()))
+    assert_array_almost_equal(np.cov(points.transpose()), [[1 / 4, 0, 0],
+                                                           [0, 1 / 4, 0],
+                                                           [0, 0, 1 / 12]], decimals)
+
+    shape = Tube()
+    points = shape.generate_uniform_random_posititons(RandomState(0), num_points)
+    assert shape.are_positions_inside(points).all()
+    assert_array_almost_equal(points.mean(axis=0), (0.5, 0, 0), decimals)
+    assert_array_almost_equal(np.median(points, axis=0), (0.5, 0, 0), decimals)
+    assert_array_almost_equal(points.std(axis=0), (1 / sqrt(12), sqrt(1.5), sqrt(1.5)), decimals)
+    assert_array_almost_equal(points.min(axis=0), (0, -2, -2), decimals)
+    assert_array_almost_equal(points.max(axis=0), (1, 2, 2), decimals)
+    print(np.cov(points.transpose()))
+    assert_array_almost_equal(np.cov(points.transpose()), [[1 / 12, 0, 0],
+                                                           [0, 1.5, 0],
+                                                           [0, 0, 1.5]], decimals)
+
+    shape = Sphere()
+    points = shape.generate_uniform_random_posititons(RandomState(0), num_points)
+    assert shape.are_positions_inside(points).all()
+    assert_array_almost_equal(points.mean(axis=0), (0, 0, 0), decimals)
+    assert_array_almost_equal(np.median(points, axis=0), (0, 0, 0), decimals)
+    assert_array_almost_equal(points.std(axis=0), (sqrt(.2), sqrt(.2), sqrt(.2)), decimals)
+    assert_array_almost_equal(points.min(axis=0), (-1, -1, -1), decimals)
+    assert_array_almost_equal(points.max(axis=0), (1, 1, 1), decimals)
+    print(np.cov(points.transpose()))
+    assert_array_almost_equal(np.cov(points.transpose()), [[.2, 0, 0],
+                                                           [0, .2, 0],
+                                                           [0, 0, .2]], decimals)
