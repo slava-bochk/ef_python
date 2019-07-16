@@ -15,7 +15,7 @@ class Simulation(SerializableH5):
     def __init__(self, time_grid, spat_mesh, inner_regions,
                  particle_sources,
                  electric_fields, magnetic_fields, particle_interaction_model,
-                 output_filename_prefix, outut_filename_suffix, max_id=-1, particle_arrays=()):
+                 output_filename_prefix='', outut_filename_suffix='.h5', max_id=-1, particle_arrays=()):
         self.time_grid = time_grid
         self.spat_mesh = spat_mesh
         self.inner_regions = inner_regions

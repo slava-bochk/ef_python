@@ -45,10 +45,10 @@ class ParticleSourceConf(ConfigComponent):
             shape_args = [l, r, b, t, n, f]
             cls = ParticleSourceBoxSection
         elif type(self.shape) is Cylinder:
-            shape_args = list(self.shape.start) + list(self.shape.end) + [self.shape.r]
+            shape_args = list(self.shape.start) + list(self.shape.end) + [self.shape.radius]
             cls = ParticleSourceCylinderSection
         elif type(self.shape) is Tube:
-            shape_args = list(self.shape.start) + list(self.shape.end) + [self.shape.r, self.shape.R]
+            shape_args = list(self.shape.start) + list(self.shape.end) + [self.shape.inner_radius, self.shape.outer_radius]
             cls = ParticleSourceTubeSection
         else:
             raise TypeError(f"Shape {type(self.shape)} of particle source not supported by config")
