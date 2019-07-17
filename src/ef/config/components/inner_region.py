@@ -26,13 +26,13 @@ class InnerRegionConf(ConfigComponent):
             shape_args = [l, r, b, t, n, f]
             cls = InnerRegionBoxSection
         elif type(self.shape) is Cylinder:
-            shape_args = list(self.shape.start) + list(self.shape.end) + [self.shape.r]
+            shape_args = list(self.shape.start) + list(self.shape.end) + [self.shape.radius]
             cls = InnerRegionCylinderSection
         elif type(self.shape) is Tube:
-            shape_args = list(self.shape.start) + list(self.shape.end) + [self.shape.r, self.shape.R]
+            shape_args = list(self.shape.start) + list(self.shape.end) + [self.shape.inner_radius, self.shape.outer_radius]
             cls = InnerRegionTubeSection
         elif type(self.shape) is Sphere:
-            shape_args = list(self.shape.origin) + [self.shape.r]
+            shape_args = list(self.shape.origin) + [self.shape.radius]
             cls = InnerRegionSphereSection
         elif type(self.shape) is Cone:
             shape_args = list(self.shape.start) + list(self.shape.start_radii) + list(self.shape.end_radii)

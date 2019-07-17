@@ -58,11 +58,11 @@ class Cylinder(Shape):
     def __init__(self, start=(0, 0, 0), end=(1, 0, 0), radius=1):
         self.start = np.array(start, np.float)
         self.end = np.array(end, np.float)
-        self.r = float(radius)
+        self.radius = float(radius)
         self._rotation = rotation_from_z(self.end - self.start)
 
     def visualize(self, visualizer, **kwargs):
-        visualizer.draw_cylinder(self.start, self.end, self.r, **kwargs)
+        visualizer.draw_cylinder(self.start, self.end, self.radius, **kwargs)
 
     def are_positions_inside(self, positions):
         pointvec = positions - self.start
@@ -72,11 +72,11 @@ class Cylinder(Shape):
         # for one-point case, dot would return a scalar, so it's cast to array explicitly
         projection = np.asarray(np.dot(pointvec, unit_axisvec))
         perp_to_axis = norm(pointvec - unit_axisvec[np.newaxis] * projection[..., np.newaxis], axis=-1)
-        result = np.logical_and.reduce([0 <= projection, projection <= axis, perp_to_axis <= self.r])
+        result = np.logical_and.reduce([0 <= projection, projection <= axis, perp_to_axis <= self.radius])
         return result
 
     def generate_uniform_random_posititons(self, random_state, n):
-        r = np.sqrt(random_state.uniform(0.0, 1.0, n)) * self.r
+        r = np.sqrt(random_state.uniform(0.0, 1.0, n)) * self.radius
         phi = random_state.uniform(0.0, 2.0 * np.pi, n)
         x = r * np.cos(phi)
         y = r * np.sin(phi)
@@ -89,12 +89,12 @@ class Tube(Shape):
     def __init__(self, start=(0, 0, 0), end=(1, 0, 0), inner_radius=1, outer_radius=2):
         self.start = np.array(start, np.float)
         self.end = np.array(end, np.float)
-        self.r = float(inner_radius)
-        self.R = float(outer_radius)
+        self.inner_radius = float(inner_radius)
+        self.outer_radius = float(outer_radius)
         self._rotation = rotation_from_z(self.end - self.start)
 
     def visualize(self, visualizer, **kwargs):
-        visualizer.draw_tube(self.start, self.end, self.r, self.R, **kwargs)
+        visualizer.draw_tube(self.start, self.end, self.inner_radius, self.outer_radius, **kwargs)
 
     def are_positions_inside(self, positions):
         pointvec = positions - self.start
@@ -105,10 +105,10 @@ class Tube(Shape):
         projection = np.asarray(np.dot(pointvec, unit_axisvec))
         perp_to_axis = norm(pointvec - unit_axisvec[np.newaxis] * projection[..., np.newaxis], axis=-1)
         return np.logical_and.reduce(
-            [0 <= projection, projection <= axis, self.r <= perp_to_axis, perp_to_axis <= self.R])
+            [0 <= projection, projection <= axis, self.inner_radius <= perp_to_axis, perp_to_axis <= self.outer_radius])
 
     def generate_uniform_random_posititons(self, random_state, n):
-        r = np.sqrt(random_state.uniform(self.r / self.R, 1.0, n)) * self.R
+        r = np.sqrt(random_state.uniform(self.inner_radius / self.outer_radius, 1.0, n)) * self.outer_radius
         phi = random_state.uniform(0.0, 2.0 * np.pi, n)
         x = r * np.cos(phi)
         y = r * np.sin(phi)
@@ -120,17 +120,17 @@ class Tube(Shape):
 class Sphere(Shape):
     def __init__(self, origin=(0, 0, 0), radius=1):
         self.origin = np.array(origin)
-        self.r = float(radius)
+        self.radius = float(radius)
 
     def visualize(self, visualizer, **kwargs):
-        visualizer.draw_sphere(self.origin, self.r, **kwargs)
+        visualizer.draw_sphere(self.origin, self.radius, **kwargs)
 
     def are_positions_inside(self, positions):
-        return norm(positions - self.origin, axis=-1) <= self.r
+        return norm(positions - self.origin, axis=-1) <= self.radius
 
     def generate_uniform_random_posititons(self, random_state, n):
         while True:
-            p = random_state.uniform(-1, 1, (n * 2, 3)) * self.r + self.origin
+            p = random_state.uniform(-1, 1, (n * 2, 3)) * self.radius + self.origin
             p = p.compress(self.are_positions_inside(p), 0)
             if len(p) > n:
                 return p[:n]

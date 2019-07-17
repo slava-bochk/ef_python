@@ -27,7 +27,10 @@ class FieldSum(Field):
 
     @classmethod
     def factory(cls, fields, electric_or_magnetic=None):
-        fields = [f for f in fields if f is not None]
+        try:
+            fields = [f for f in fields if f is not None]
+        except TypeError:
+            fields = [] if fields is None else [fields]
         em = (set(f.electric_or_magnetic for f in fields) | {electric_or_magnetic}) - {None}
         if len(em) > 1:
             raise ValueError('Trying to combine inconsistent fields')
