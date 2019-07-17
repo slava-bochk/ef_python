@@ -9,21 +9,21 @@ from ef.main import main
 
 _examples_conf = [("examples/minimal_working_example/minimal_conf.conf", ()),
                   ("examples/single_particle_in_free_space/single_particle_in_free_space.conf",
-              pytest.mark.slowish),
+                   pytest.mark.slowish),
                   ("examples/single_particle_in_magnetic_field/single_particle_in_magnetic_field.conf",
-              pytest.mark.slowish),
+                   pytest.mark.slowish),
                   ("examples/single_particle_in_magnetic_field/large_time_step.conf",
-              pytest.mark.slowish),
+                   pytest.mark.slowish),
                   ("examples/tube_source_test/contour.conf",
-              pytest.mark.slow),
+                   pytest.mark.slow),
                   ("examples/single_particle_in_radial_electric_field/single_particle_in_radial_electric_field.conf",
-              pytest.mark.slowish),
+                   pytest.mark.slowish),
                   ("examples/ribbon_beam_contour/contour_bin.conf",
-              pytest.mark.slow),
+                   pytest.mark.slow),
                   ("examples/ribbon_beam_contour/contour.conf",
-              pytest.mark.slow),
+                   pytest.mark.slow),
                   ("examples/drift_tube_potential/pot.conf",
-              pytest.mark.slow)]
+                   pytest.mark.slow)]
 
 _examples_jupyter = [("examples/axially_symmetric_beam_contour/axially_symmetric_beam_contour.ipynb",
                       pytest.mark.slow)]
@@ -42,8 +42,18 @@ def test_example_conf(fname, mocker, capsys, tmpdir, monkeypatch):
     assert err == ""
 
 
+def test_all_examples_visualize():
+    import nbformat
+    from nbconvert.preprocessors import ExecutePreprocessor
+    fname = "examples/jupyter/visualize_examples.ipynb".replace('/', os.path.sep)
+    with open(fname) as f:
+        nb = nbformat.read(f, as_version=4)
+    ep = ExecutePreprocessor(timeout=600)
+    ep.preprocess(nb, {'metadata': {'path': 'examples/jupyter/'}})
+
+
 @pytest.mark.parametrize("fname", _pytest_params_example_jupyter)
-def test_example_jupyter(fname, tmpdir, monkeypatch):
+def test_example_jupyter(fname, tmpdir):
     import nbformat
     from nbconvert.preprocessors import ExecutePreprocessor
     with open(fname) as f:
