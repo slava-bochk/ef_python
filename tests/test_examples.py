@@ -8,19 +8,17 @@ import pytest
 from ef.main import main
 
 _examples_conf = [("examples/minimal_working_example/minimal_conf.conf", ()),
-                  ("examples/single_particle_in_free_space/single_particle_in_free_space.conf",
-                   pytest.mark.slowish),
+                  ("examples/single_particle_in_free_space/single_particle_in_free_space.conf", pytest.mark.slowish),
                   ("examples/single_particle_in_magnetic_field/single_particle_in_magnetic_field.conf",
                    pytest.mark.slowish),
-                  ("examples/single_particle_in_magnetic_field/large_time_step.conf",
-                   pytest.mark.slowish),
+                  ("examples/single_particle_in_magnetic_field/large_time_step.conf", pytest.mark.slowish),
                   ("examples/single_particle_in_radial_electric_field/single_particle_in_radial_electric_field.conf",
                    pytest.mark.slowish),
-                  ("examples/tube_source_test/contour.conf",
-                   pytest.mark.slow),
+                  ("examples/tube_source_test/contour.conf", pytest.mark.slow),
                   ("examples/ribbon_beam_contour/contour_bin.conf", ()),
-                  ("examples/ribbon_beam_contour/contour.conf",
-                   pytest.mark.slowish)]
+                  ("examples/ribbon_beam_contour/contour.conf", pytest.mark.slowish),
+                  ("examples/drift_tube_potential/pot.conf", pytest.mark.slowish)
+                  ]
 
 _pytest_params_example_conf = [pytest.param(f.replace('/', os.path.sep), marks=m) for f, m in _examples_conf]
 
@@ -48,16 +46,19 @@ def run_jupyter(dir, fname, path=None, copy_dir=False):
     ep.preprocess(nb, {'metadata': {'path': path}} if path is not None else {})
 
 
+@pytest.mark.jupyter
 def test_all_examples_visualize():
     run_jupyter("examples/jupyter", "visualize_examples.ipynb", 'examples/jupyter/')
 
 
 @pytest.mark.slow
+@pytest.mark.jupyter
 def test_axially_symmetric_beam_contour(tmpdir):
     run_jupyter("examples/axially_symmetric_beam_contour", "axially_symmetric_beam_contour.ipynb", tmpdir)
 
 
 @pytest.mark.slowish
+@pytest.mark.jupyter
 def test_drift_tube_potential(tmpdir):
     run_jupyter("examples/drift_tube_potential", "potential.ipynb", tmpdir.join('newdir'), True)
 
