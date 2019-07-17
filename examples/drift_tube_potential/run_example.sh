@@ -1,2 +1,3 @@
-python3 ../../main.py pot.conf
+#!/usr/bin/env bash
+ef pot.conf
 python3 plot.py
