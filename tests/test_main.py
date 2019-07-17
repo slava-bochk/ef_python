@@ -1,10 +1,3 @@
-import os
-import subprocess
-from os.path import basename
-from shutil import copyfile
-
-import pytest
-
 from ef.config.components import TimeGridConf
 from ef.config.config import Config
 from ef.main import main
@@ -65,46 +58,3 @@ Writing step 10 to file
 Writing to file out_0000010_new.h5
 Writing to file out_0000010.h5
 """
-
-
-_examples = [("examples/minimal_working_example/minimal_conf.conf", ()),
-             ("examples/single_particle_in_free_space/single_particle_in_free_space.conf",
-              pytest.mark.slowish),
-             ("examples/single_particle_in_magnetic_field/single_particle_in_magnetic_field.conf",
-              pytest.mark.slowish),
-             ("examples/single_particle_in_magnetic_field/large_time_step.conf",
-              pytest.mark.slowish),
-             ("examples/tube_source_test/contour.conf",
-              pytest.mark.slow),
-             ("examples/single_particle_in_radial_electric_field/single_particle_in_radial_electric_field.conf",
-              pytest.mark.slowish),
-             ("examples/ribbon_beam_contour/contour_bin.conf",
-              pytest.mark.slow),
-             ("examples/ribbon_beam_contour/contour.conf",
-              pytest.mark.slow),
-             ("examples/drift_tube_potential/pot.conf",
-              pytest.mark.slow)]
-
-_pytest_params = [pytest.param(f.replace('/', os.path.sep), marks=m) for f, m in _examples]
-
-
-@pytest.mark.parametrize("fname", _pytest_params)
-def test_example(fname, mocker, capsys, tmpdir, monkeypatch):
-    copyfile(fname, tmpdir.join(basename(fname)))
-    monkeypatch.chdir(tmpdir)
-    mocker.patch("sys.argv", ["main.py", str(basename(fname))])
-    main()
-    out, err = capsys.readouterr()
-    assert err == ""
-
-
-@pytest.mark.requires_install
-@pytest.mark.parametrize("fname", _pytest_params)
-def test_main_shell(fname, tmpdir, monkeypatch):
-    basedir = os.path.join(os.path.dirname(__file__), '..')
-    monkeypatch.chdir(tmpdir)
-    result = subprocess.run(['ef', os.path.join(basedir, fname)], check=True,
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-    for line in result.stderr.split("\n"):
-        assert line == '' or line.startswith("WARNING:")
-    assert result.stdout != ""
