@@ -63,6 +63,12 @@ def test_drift_tube_potential(tmpdir):
     run_jupyter("examples/drift_tube_potential", "potential.ipynb", tmpdir.join('newdir'), True)
 
 
+@pytest.mark.slow
+@pytest.mark.jupyter
+def test_ribbon_beam_contour(tmpdir):
+    run_jupyter("examples/ribbon_beam_contour", "beam.ipynb", tmpdir.join('newdir'), True)
+
+
 @pytest.mark.requires_install
 @pytest.mark.parametrize("fname", _pytest_params_example_conf)
 def test_main_shell(fname, tmpdir, monkeypatch):
