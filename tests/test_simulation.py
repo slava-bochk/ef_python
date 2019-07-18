@@ -37,7 +37,6 @@ class TestSimulation:
         assert sim._output_filename_prefix == "out_"
         assert sim._output_filename_suffix == ".h5"
 
-    @pytest.mark.slowish
     def test_all_config(self):
         efconf = Config(TimeGridConf(200, 20, 2), SpatialMeshConf((5, 5, 5), (.1, .1, .1)),
                         sources=[ParticleSourceConf('a', Box()),
@@ -119,7 +118,7 @@ class TestSimulation:
         assert len(sim.particle_arrays) == 1
         assert_array_equal(sim.particle_arrays[0].ids, range(100))
 
-    def test_write(self, monkeypatch, tmpdir, mocker):
+    def test_write(self, monkeypatch, tmpdir):
         monkeypatch.chdir(tmpdir)
         conf = Config(TimeGridConf(1, 1, .01), SpatialMeshConf((5, 5, 5), (.1, .1, .1)),
                       sources=[ParticleSourceConf('a', Box()),
@@ -152,7 +151,8 @@ class TestSimulation:
             sim3 = Simulation.import_from_h5(h5file, 'out_', '.h5')
             assert sim3 == sim
 
-    def test_particle_generation(self, mocker):
+    def test_particle_generation(self, monkeypatch,  tmpdir):
+        monkeypatch.chdir(tmpdir)
         conf = Config(TimeGridConf(2, 1, 1), SpatialMeshConf((5, 5, 5), (.1, .1, .1)),
                       sources=[ParticleSourceConf('a', Box((2, 2, 2), (0, 0, 0)), 2, 1, (0, 0, 0), 0, charge=0),
                                ParticleSourceConf('b', Box((1, 1, 1), (0, 0, 0)), 7, 5, (0, 0, 0), 0, charge=0)],
