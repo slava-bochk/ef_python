@@ -5,6 +5,7 @@ from shutil import copytree, copy
 
 import pytest
 
+from ef.config.config import Config
 from ef.main import main
 
 _examples_conf = [("examples/minimal_working_example/minimal_conf.conf", ()),
@@ -67,6 +68,14 @@ def test_drift_tube_potential(tmpdir):
 @pytest.mark.jupyter
 def test_ribbon_beam_contour(tmpdir):
     run_jupyter("examples/ribbon_beam_contour", "beam.ipynb", tmpdir.join('newdir'), True)
+
+
+@pytest.mark.jupyter
+def test_single_particle_in_free_space(tmpdir):
+    run_jupyter("examples/single_particle_in_free_space", "single_particle_in_free_space.ipynb",
+                tmpdir.join('newdir'), True)
+    assert Config.from_fname(tmpdir.join('newdir').join('config.ini')) == \
+           Config.from_fname(tmpdir.join('newdir').join('single_particle_in_free_space.conf'))
 
 
 @pytest.mark.requires_install
