@@ -78,6 +78,12 @@ def test_single_particle_in_free_space(tmpdir):
            Config.from_fname(tmpdir.join('newdir').join('single_particle_in_free_space.conf'))
 
 
+@pytest.mark.jupyter
+def test_single_particle_in_uniform_electric_field(tmpdir):
+    run_jupyter("examples/single_particle_in_electric_field", "single_particle_in_uniform_electric_field.ipynb",
+                tmpdir)
+
+
 @pytest.mark.requires_install
 @pytest.mark.parametrize("fname", _pytest_params_example_conf)
 def test_main_shell(fname, tmpdir, monkeypatch):
