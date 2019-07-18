@@ -289,27 +289,27 @@ class Simulation(SerializableH5):
     def export_h5(self, h5file):
         g = h5file.create_group('SpatialMesh')
         for i, c in enumerate('xyz'):
-            g.attrs['{}_volume_size'.format(c)] = self.spat_mesh.size[i]
-            g.attrs['{}_cell_size'.format(c)] = self.spat_mesh.cell[i]
-            g.attrs['{}_n_nodes'.format(c)] = self.spat_mesh.n_nodes[i]
+            g.attrs['{}_volume_size'.format(c)] = [self.spat_mesh.size[i]]
+            g.attrs['{}_cell_size'.format(c)] = [self.spat_mesh.cell[i]]
+            g.attrs['{}_n_nodes'.format(c)] = [self.spat_mesh.n_nodes[i]]
             g['node_coordinates_{}'.format(c)] = self.spat_mesh.node_coordinates[..., i].flatten()
             g['electric_field_{}'.format(c)] = self.spat_mesh.electric_field[..., i].flatten()
-        g['charge_density'] = self.spat_mesh.charge_density.flatten()
-        g['potential'] = self.spat_mesh.potential.flatten()
+        g['charge_density'] = [self.spat_mesh.charge_density.flatten()]
+        g['potential'] = [self.spat_mesh.potential.flatten()]
 
         g = h5file.create_group('TimeGrid')
         for k in 'total_time', 'current_time', 'time_step_size', 'time_save_step', \
                  'total_nodes', 'current_node', 'node_to_save':
-            g.attrs[k] = getattr(self.time_grid, k)
+            g.attrs[k] = [getattr(self.time_grid, k)]
 
         g = h5file.create_group('ParticleSources')
-        g.attrs['number_of_sources'] = len(self.particle_sources)
+        g.attrs['number_of_sources'] = [len(self.particle_sources)]
         for i, s in enumerate(self.particle_sources):
             sg = g.create_group(s.name)
             for k in 'temperature', 'charge', 'mass', 'initial_number_of_particles', 'particles_to_generate_each_step':
-                sg.attrs[k] = getattr(s, k)
+                sg.attrs[k] = [getattr(s, k)]
             for i, c in enumerate('xyz'):
-                sg.attrs['mean_momentum_{}'.format(c)] = s.mean_momentum[i]
+                sg.attrs['mean_momentum_{}'.format(c)] = [s.mean_momentum[i]]
             if s.shape.__class__ is Box:
                 geom = 'box'
                 sg.attrs['box_x_right'] = s.shape.origin[0]
