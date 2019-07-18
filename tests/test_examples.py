@@ -72,6 +72,13 @@ def test_ribbon_beam_contour(tmpdir):
     run_jupyter("examples/ribbon_beam_contour", "beam.ipynb", tmpdir.join('newdir'), True)
 
 
+@pytest.mark.slow
+@pytest.mark.test
+@pytest.mark.jupyter
+def test_tube_source(tmpdir):
+    run_jupyter("examples/tube_source_test", "plot.ipynb", tmpdir.join('newdir'), True)
+
+
 @pytest.mark.slowish
 @pytest.mark.jupyter
 def test_single_particle_in_free_space(tmpdir):
