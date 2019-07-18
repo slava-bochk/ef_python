@@ -13,6 +13,7 @@ _examples_conf = [("examples/minimal_working_example/minimal_conf.conf", ()),
                   ("examples/single_particle_in_magnetic_field/single_particle_in_magnetic_field.conf",
                    pytest.mark.slowish),
                   ("examples/single_particle_in_magnetic_field/large_time_step.conf", pytest.mark.slowish),
+                  ("examples/single_particle_in_magnetic_field/long_simulation_time.conf", pytest.mark.slow),
                   ("examples/single_particle_in_radial_electric_field/single_particle_in_radial_electric_field.conf",
                    ()),
                   ("examples/tube_source_test/contour.conf", pytest.mark.slow),
@@ -87,6 +88,14 @@ def test_single_particle_in_uniform_electric_field(tmpdir):
 @pytest.mark.jupyter
 def test_single_particle_in_radial_electric_field(tmpdir):
     run_jupyter("examples/single_particle_in_radial_electric_field", "plot.ipynb", tmpdir.join('newdir'), True)
+
+
+@pytest.mark.slow
+@pytest.mark.jupyter
+def test_particle_in_magnetic_field(tmpdir):
+    run_jupyter("examples/single_particle_in_magnetic_field", "Single Particle in Uniform Magnetic Field.ipynb", tmpdir)
+    run_jupyter("examples/single_particle_in_magnetic_field", "single_particle_in_magnetic_field.ipynb",
+                tmpdir.join('newdir'), True)
 
 
 @pytest.mark.requires_install
