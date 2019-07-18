@@ -10,16 +10,16 @@ from ef.main import main
 
 _examples_conf = [("examples/minimal_working_example/minimal_conf.conf", ()),
                   ("examples/single_particle_in_free_space/single_particle_in_free_space.conf", pytest.mark.slowish),
-                  ("examples/single_particle_in_magnetic_field/single_particle_in_magnetic_field.conf",
-                   pytest.mark.slowish),
-                  ("examples/single_particle_in_magnetic_field/large_time_step.conf", pytest.mark.slowish),
-                  ("examples/single_particle_in_magnetic_field/long_simulation_time.conf", pytest.mark.slow),
                   ("examples/single_particle_in_radial_electric_field/single_particle_in_radial_electric_field.conf",
                    ()),
-                  ("examples/tube_source_test/contour.conf", pytest.mark.slow),
-                  ("examples/ribbon_beam_contour/contour_bin.conf", ()),
-                  ("examples/ribbon_beam_contour/contour.conf", pytest.mark.slowish),
-                  ("examples/drift_tube_potential/pot.conf", pytest.mark.slowish)
+                  ("examples/single_particle_in_magnetic_field/single_particle_in_magnetic_field.conf",
+                   pytest.mark.slow),
+                  ("examples/single_particle_in_magnetic_field/large_time_step.conf", pytest.mark.slow),
+                  ("examples/single_particle_in_magnetic_field/long_simulation_time.conf", pytest.mark.slow),
+                  ("examples/ribbon_beam_contour/contour_bin.conf", pytest.mark.slowish),
+                  ("examples/drift_tube_potential/pot.conf", pytest.mark.slow),
+                  ("examples/ribbon_beam_contour/contour.conf", pytest.mark.slow),
+                  ("examples/tube_source_test/contour.conf", pytest.mark.slow)
                   ]
 
 _pytest_params_example_conf = [pytest.param(f.replace('/', os.path.sep), marks=m) for f, m in _examples_conf]
@@ -48,6 +48,7 @@ def run_jupyter(dir, fname, path=None, copy_dir=False):
     ep.preprocess(nb, {'metadata': {'path': path}} if path is not None else {})
 
 
+@pytest.mark.slowish
 @pytest.mark.jupyter
 def test_all_examples_visualize():
     run_jupyter("examples/jupyter", "visualize_examples.ipynb", 'examples/jupyter/')
@@ -59,7 +60,7 @@ def test_axially_symmetric_beam_contour(tmpdir):
     run_jupyter("examples/axially_symmetric_beam_contour", "axially_symmetric_beam_contour.ipynb", tmpdir)
 
 
-@pytest.mark.slowish
+@pytest.mark.slow
 @pytest.mark.jupyter
 def test_drift_tube_potential(tmpdir):
     run_jupyter("examples/drift_tube_potential", "potential.ipynb", tmpdir.join('newdir'), True)
@@ -71,6 +72,7 @@ def test_ribbon_beam_contour(tmpdir):
     run_jupyter("examples/ribbon_beam_contour", "beam.ipynb", tmpdir.join('newdir'), True)
 
 
+@pytest.mark.slowish
 @pytest.mark.jupyter
 def test_single_particle_in_free_space(tmpdir):
     run_jupyter("examples/single_particle_in_free_space", "single_particle_in_free_space.ipynb",
@@ -79,12 +81,14 @@ def test_single_particle_in_free_space(tmpdir):
            Config.from_fname(tmpdir.join('newdir').join('single_particle_in_free_space.conf'))
 
 
+@pytest.mark.slowish
 @pytest.mark.jupyter
 def test_single_particle_in_uniform_electric_field(tmpdir):
     run_jupyter("examples/single_particle_in_electric_field", "single_particle_in_uniform_electric_field.ipynb",
                 tmpdir)
 
 
+@pytest.mark.slowish
 @pytest.mark.jupyter
 def test_single_particle_in_radial_electric_field(tmpdir):
     run_jupyter("examples/single_particle_in_radial_electric_field", "plot.ipynb", tmpdir.join('newdir'), True)
