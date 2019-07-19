@@ -71,6 +71,7 @@ class Simulation(SerializableH5):
         self.run_pic()
 
     def continue_pic_simulation(self):
+        self.create_history_file()
         self.run_pic()
 
     def run_pic(self):
@@ -469,6 +470,7 @@ class Simulation(SerializableH5):
             print("Make sure the directory you want to save to exists.")
         print("Creating history file {}".format(file_name_to_write))
 
+        self.save_h5(h5file)
         h5file['/time'] = np.linspace(0, self.time_grid.total_time, n_time)
         h5file['/particles/ids'] = np.arange(n_particles)
         h5file['/particles/coordinates'] = [np.string_('x'), np.string_('y'), np.string_('z')]
