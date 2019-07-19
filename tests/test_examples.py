@@ -73,7 +73,6 @@ def test_ribbon_beam_contour(tmpdir):
 
 
 @pytest.mark.slow
-@pytest.mark.test
 @pytest.mark.jupyter
 def test_tube_source(tmpdir):
     run_jupyter("examples/tube_source_test", "plot.ipynb", tmpdir.join('newdir'), True)
