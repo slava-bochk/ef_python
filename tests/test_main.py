@@ -38,6 +38,7 @@ particle_interaction_model = PIC
 Writing initial fields to file
 Writing to file out_fieldsWithoutParticles_new.h5
 Writing to file out_fieldsWithoutParticles.h5
+Creating history file out_history.h5
 Writing step 0 to file
 Writing to file out_0000000_new.h5
 Writing to file out_0000000.h5

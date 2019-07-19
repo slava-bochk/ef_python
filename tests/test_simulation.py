@@ -134,6 +134,8 @@ class TestSimulation:
                                        ExternalFieldExpressionConf('y', 'magnetic',
                                                                    ('0', '0', '3*x + sqrt(y) - z**2'))])
         sim = conf.make()
+        sim.create_history_file()
+        assert tmpdir.join('out_history.h5').exists()
         sim.write()
         assert tmpdir.join('out_0000000.h5').exists()
         assert tmpdir.join('out_0000000_new.h5').exists()
