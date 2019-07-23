@@ -7,9 +7,10 @@ from ef.config.component import ConfigComponent
 
 
 class OutputFileConf(ConfigComponent):
-    def __init__(self, prefix="out_", suffix=".h5"):
+    def __init__(self, prefix="out_", suffix=".h5", format_="cpp"):
         self.prefix = prefix
         self.suffix = suffix
+        self.format_ = format_
 
     def to_conf(self):
         return OutputFilenameSection(self.prefix, self.suffix)

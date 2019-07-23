@@ -15,7 +15,7 @@ from ef.simulation import Simulation
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("config_or_h5_file", help="config or h5 file", type=guess_input_type)
-    parser.add_argument("--output-format", default="python", help="select output hdf5 format",
+    parser.add_argument("--output-format", default="cpp", help="select output hdf5 format",
                         choices=["python", "cpp", "history"])
     parser.add_argument("--prefix", help="customize output file prefix")
     parser.add_argument("--suffix", help="customize output file suffix")
@@ -24,14 +24,14 @@ def main():
 
     is_config, parser_or_h5_filename = args.config_or_h5_file
     if is_config:
-        sim = read_conf(parser_or_h5_filename, args.prefix, args.suffix).make()
+        sim = read_conf(parser_or_h5_filename, args.prefix, args.suffix, args.output_format).make()
         sim.start_pic_simulation()
     else:
         print("Continuing from h5 file:", parser_or_h5_filename)
         prefix, suffix = merge_h5_prefix_suffix(parser_or_h5_filename, args.prefix, args.suffix)
         print("Using output prefix and suffix:", prefix, suffix)
         with h5py.File(parser_or_h5_filename, 'r') as h5file:
-            sim = Simulation.init_from_h5(h5file, prefix, suffix)
+            sim = Simulation.init_from_h5(h5file, prefix, suffix, args.output_format)
         sim.continue_pic_simulation()
     return 0
 
@@ -60,12 +60,13 @@ def guess_input_type(file_name):
                             .format(file_name, h5_error, conf_error))
 
 
-def read_conf(parser, prefix, suffix):
+def read_conf(parser, prefix, suffix, format_):
     conf = Config.from_configparser(parser)
     if prefix:
         conf.output_file.prefix = prefix
     if suffix:
         conf.output_file.suffix = suffix
+    conf.output_file.format_ = format_
     print(conf)
     return conf
 

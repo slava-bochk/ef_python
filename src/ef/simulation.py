@@ -25,7 +25,8 @@ class Simulation(SerializableH5):
     def __init__(self, time_grid, spat_mesh, inner_regions,
                  particle_sources,
                  electric_fields, magnetic_fields, particle_interaction_model,
-                 output_filename_prefix='', outut_filename_suffix='.h5', max_id=-1, particle_arrays=()):
+                 output_filename_prefix='', outut_filename_suffix='.h5', output_format="cpp",
+                 max_id=-1, particle_arrays=()):
         self.time_grid = time_grid
         self.spat_mesh = spat_mesh
         self.inner_regions = inner_regions
@@ -51,27 +52,31 @@ class Simulation(SerializableH5):
 
         self._output_filename_prefix = output_filename_prefix
         self._output_filename_suffix = outut_filename_suffix
+        self._output_format = output_format
         self.max_id = max_id
 
     @classmethod
-    def init_from_h5(cls, h5file, filename_prefix, filename_suffix):
+    def init_from_h5(cls, h5file, filename_prefix, filename_suffix, output_format):
         if 'SpatialMesh' in h5file:
-            simulation = cls.import_from_h5(h5file, filename_prefix, filename_suffix)
+            simulation = cls.import_from_h5(h5file, filename_prefix, filename_suffix, output_format)
         else:
             simulation = cls.load_h5(h5file)
             simulation._output_filename_prefix = filename_prefix
             simulation._output_filename_suffix = filename_suffix
+            simulation._output_format = output_format
         return simulation
 
     def start_pic_simulation(self):
         self.eval_and_write_fields_without_particles()
-        self.create_history_file()
+        if self._output_format == "history":
+            self.create_history_file()
         self.generate_and_prepare_particles(initial=True)
         self.write_step_to_save()
         self.run_pic()
 
     def continue_pic_simulation(self):
-        self.create_history_file()
+        if self._output_format == "history":
+            self.create_history_file()
         self.run_pic()
 
     def run_pic(self):
@@ -187,7 +192,7 @@ class Simulation(SerializableH5):
             self.write()
 
     @classmethod
-    def import_from_h5(self, h5file, filename_prefix, filename_suffix):
+    def import_from_h5(self, h5file, filename_prefix, filename_suffix, output_format):
         g = h5file['SpatialMesh']
         ga = g.attrs
         size = np.array([ga['{}_volume_size'.format(c)] for c in 'xyz']).reshape(3)
@@ -286,6 +291,7 @@ class Simulation(SerializableH5):
                           particle_sources=sources, electric_fields=ef, magnetic_fields=mf,
                           particle_interaction_model=pim,
                           output_filename_prefix=filename_prefix, outut_filename_suffix=filename_suffix,
+                          output_format=output_format,
                           max_id=max_id, particle_arrays=particles)
 
     def export_h5(self, h5file):
@@ -453,9 +459,16 @@ class Simulation(SerializableH5):
 
     def write(self):
         print("Writing step {} to file".format(self.time_grid.current_node))
-        self._write("{:07}_new".format(self.time_grid.current_node))
-        self._write("{:07}".format(self.time_grid.current_node), export=True)
-        self.write_history()
+        if self._output_format == "python":
+            self._write("{:07}".format(self.time_grid.current_node))
+        elif self._output_format == "cpp":
+            self._write("{:07}".format(self.time_grid.current_node), export=True)
+        elif self._output_format == "history":
+            self.write_history()
+        elif self._output_format == "none":
+            pass
+        else:
+            raise ValueError("Unknown simulaiton output format.")
 
     def create_history_file(self):
         n_particles = sum(s.initial_number_of_particles +
@@ -537,8 +550,14 @@ class Simulation(SerializableH5):
         self.spat_mesh.clear_old_density_values()
         self.eval_potential_and_fields()
         print("Writing initial fields to file")
-        self._write("fieldsWithoutParticles_new")
-        self._write("fieldsWithoutParticles", export=True)
+        if self._output_format == "python":
+            self._write("fieldsWithoutParticles")
+        elif self._output_format == "cpp":
+            self._write("fieldsWithoutParticles", export=True)
+        elif self._output_format in ("none", "history"):
+            pass
+        else:
+            raise ValueError("Unknown simulaiton output format.")
 
     def consolidate_particle_arrays(self):
         particles_by_type = defaultdict(list)

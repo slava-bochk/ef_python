@@ -109,7 +109,7 @@ class Config(DataClass):
         magnetic_fields = [s.make() for s in self.external_fields if s.electric_or_magnetic == 'magnetic']
         model = self.particle_interaction_model.make()
         return simulation.Simulation(grid, mesh, regions, sources, electric_fields, magnetic_fields, model,
-                                     self.output_file.prefix, self.output_file.suffix)
+                                     self.output_file.prefix, self.output_file.suffix, self.output_file.format_)
 
 
 def main():

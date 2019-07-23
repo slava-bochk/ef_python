@@ -138,20 +138,17 @@ class TestSimulation:
         assert tmpdir.join('out_history.h5').exists()
         sim.write()
         assert tmpdir.join('out_0000000.h5').exists()
-        assert tmpdir.join('out_0000000_new.h5').exists()
+        assert not tmpdir.join('out_0000000_new.h5').exists()
         sim.time_grid.update_to_next_step()
         sim.time_grid.update_to_next_step()
         sim.write()
         assert not tmpdir.join('out_0000001.h5').exists()
         assert not tmpdir.join('out_0000001_new.h5').exists()
         assert tmpdir.join('out_0000002.h5').exists()
-        assert tmpdir.join('out_0000002_new.h5').exists()
-        with h5py.File('out_0000002_new.h5', 'r') as h5file:
-            sim2 = Simulation.init_from_h5(h5file, 'out_', '.h5')
-            assert sim2 == sim
+        assert not tmpdir.join('out_0000002_new.h5').exists()
         with h5py.File('out_0000002.h5', 'r') as h5file:
-            sim3 = Simulation.import_from_h5(h5file, 'out_', '.h5')
-            assert sim3 == sim
+            sim2 = Simulation.init_from_h5(h5file, 'out_', '.h5', 'python')
+            assert sim2 == sim
 
     def test_particle_generation(self, monkeypatch,  tmpdir):
         monkeypatch.chdir(tmpdir)
