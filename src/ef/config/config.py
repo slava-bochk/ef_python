@@ -105,8 +105,9 @@ class Config(DataClass):
         mesh = self.spatial_mesh.make(self.boundary_conditions)
         regions = [ir.make() for ir in self.inner_regions]
         sources = [s.make() for s in self.sources]
-        electric_fields = [s.make() for s in self.external_fields if s.electric_or_magnetic == 'electric']
-        magnetic_fields = [s.make() for s in self.external_fields if s.electric_or_magnetic == 'magnetic']
+        fields = [f.make() for f in self.external_fields]
+        electric_fields = [f for f in fields if f.electric_or_magnetic == 'electric']
+        magnetic_fields = [f for f in fields if f.electric_or_magnetic == 'magnetic']
         model = self.particle_interaction_model.make()
         return simulation.Simulation(grid, mesh, regions, sources, electric_fields, magnetic_fields, model,
                                      self.output_file.prefix, self.output_file.suffix, self.output_file.format_)

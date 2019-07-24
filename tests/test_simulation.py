@@ -48,9 +48,8 @@ class TestSimulation:
                                        InnerRegionConf('4', Tube(), 4)],
                         output_file=OutputFileConf(), boundary_conditions=BoundaryConditionsConf(-2.7),
                         particle_interaction_model=ParticleInteractionModelConf('binary'),
-                        external_fields=[ExternalFieldUniformConf('x', 'electric', (-2, -2, 1)),
-                                         ExternalFieldExpressionConf('y', 'magnetic',
-                                                                     ('0', '0', '3*x + sqrt(y) - z**2'))])
+                        external_fields=[ExternalElectricFieldUniformConf('x', (-2, -2, 1)),
+                                         ExternalMagneticFieldExpressionConf('y', ('0', '0', '3*x + sqrt(y) - z**2'))])
 
         parser = ConfigParser()
         parser.read_string(efconf.export_to_string())
@@ -130,9 +129,8 @@ class TestSimulation:
                                      InnerRegionConf('4', Tube((0, 0, 0), (0, 0, 1)), 4)],
                       output_file=OutputFileConf(), boundary_conditions=BoundaryConditionsConf(-2.7),
                       particle_interaction_model=ParticleInteractionModelConf('binary'),
-                      external_fields=[ExternalFieldUniformConf('x', 'electric', (-2, -2, 1)),
-                                       ExternalFieldExpressionConf('y', 'magnetic',
-                                                                   ('0', '0', '3*x + sqrt(y) - z**2'))])
+                      external_fields=[ExternalElectricFieldUniformConf('x', (-2, -2, 1)),
+                                       ExternalMagneticFieldExpressionConf('y', ('0', '0', '3*x + sqrt(y) - z**2'))])
         sim = conf.make()
         sim.create_history_file()
         assert tmpdir.join('out_history.h5').exists()

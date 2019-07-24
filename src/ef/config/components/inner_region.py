@@ -86,7 +86,7 @@ class InnerRegionTubeSection(NamedConfigSection):
 
 
 class InnerRegionSphereSection(NamedConfigSection):
-    section = "Inner_region_sphere"
+    section = "InnerRegionSphere"
     ContentTuple = namedtuple("InnerRegionSphereTuple", ('sphere_origin_x', 'sphere_origin_y',
                                                          'sphere_origin_z', 'sphere_radius', 'potential'))
     convert = ContentTuple(*[float] * 5)
