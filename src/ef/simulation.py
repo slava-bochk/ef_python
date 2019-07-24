@@ -294,8 +294,8 @@ class Simulation(SerializableH5):
             g.attrs['{}_n_nodes'.format(c)] = [self.spat_mesh.n_nodes[i]]
             g['node_coordinates_{}'.format(c)] = self.spat_mesh.node_coordinates[..., i].flatten()
             g['electric_field_{}'.format(c)] = self.spat_mesh.electric_field[..., i].flatten()
-        g['charge_density'] = [self.spat_mesh.charge_density.flatten()]
-        g['potential'] = [self.spat_mesh.potential.flatten()]
+        g['charge_density'] = self.spat_mesh.charge_density.flatten()
+        g['potential'] = self.spat_mesh.potential.flatten()
 
         g = h5file.create_group('TimeGrid')
         for k in 'total_time', 'current_time', 'time_step_size', 'time_save_step', \
