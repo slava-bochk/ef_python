@@ -30,7 +30,7 @@ class ParticleArray(SerializableH5):
         self.momentum_is_half_time_step_shifted = momentum_is_half_time_step_shifted
 
     def keep(self, mask):
-        self.ids = self.ids[mask]
+        self.ids = self.ids[mask].flatten()
         self.positions = self.positions[mask]
         self.momentums = self.momentums[mask]
 

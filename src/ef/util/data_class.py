@@ -22,7 +22,8 @@ class DataClass:
         for k, v in self.dict.items():
             w = other.dict[k]
             if isinstance(v, np.ndarray) or isinstance(w, np.ndarray):
-                # Warning: NaN != NaN, may cause problems if array has NaNs
+                if np.asarray(v).shape != np.asarray(w).shape:
+                    return False
                 if np.any(v != w):
                     return False
             else:
