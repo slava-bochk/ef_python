@@ -82,8 +82,8 @@ class Simulation(SerializableH5):
         total_time_iterations = self.time_grid.total_nodes - 1
         current_node = self.time_grid.current_node
         for i in range(current_node, total_time_iterations):
-            print("Time step from {:d} to {:d} of {:d}".format(
-                i, i + 1, total_time_iterations))
+            print("\rTime step from {:d} to {:d} of {:d}".format(
+                i, i + 1, total_time_iterations), end='')
             self.advance_one_time_step()
             self.write_step_to_save()
 
@@ -288,16 +288,18 @@ class Simulation(SerializableH5):
             print("Error: can't open file " + file_name_to_write + "to save results!")
             print("Recheck \'output_filename_prefix\' key in config file.")
             print("Make sure the directory you want to save to exists.")
-        print("Writing to file {}".format(file_name_to_write))
+        print("Writing to file {}".format(file_name_to_write), end='')
         self.export_h5(h5file) if export else self.save_h5(h5file)
         h5file.close()
 
     def write(self):
-        print("Writing step {} to file".format(self.time_grid.current_node))
+        print("\nWriting step {} to file".format(self.time_grid.current_node))
         if self._output_format == "python":
             self._write("{:07}".format(self.time_grid.current_node))
+            print()
         elif self._output_format == "cpp":
             self._write("{:07}".format(self.time_grid.current_node), export=True)
+            print()
         elif self._output_format == "history":
             self.write_history()
         elif self._output_format == "none":
