@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.testing import assert_array_equal
 
 
 class DataClass:
@@ -30,6 +31,21 @@ class DataClass:
                 if v != w:
                     return False
         return True
+
+    def assert_eq(self, other):
+        if self is other:
+            return
+        assert type(self) is type(other)
+        assert self.dict.keys() == other.dict.keys()
+        for k, v in self.dict.items():
+            w = other.dict[k]
+            if isinstance(v, np.ndarray) or isinstance(w, np.ndarray):
+                assert np.asarray(v).shape == np.asarray(w).shape, k
+                assert_array_equal(v, w)
+            elif isinstance(v, DataClass):
+                v.assert_eq(w)
+            else:
+                assert v == w, k
 
     def __repr__(self):
         cls = self.__class__.__name__

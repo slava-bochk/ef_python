@@ -146,7 +146,9 @@ class TestSimulation:
         assert not tmpdir.join('out_0000002_new.h5').exists()
         with h5py.File('out_0000002.h5', 'r') as h5file:
             sim2 = Simulation.init_from_h5(h5file, 'out_', '.h5', 'python')
-            assert sim2 == sim
+            for i, ir in enumerate(sim2.inner_regions):
+                ir.assert_eq(sim.inner_regions[i])
+            sim2.assert_eq(sim)
 
     def test_particle_generation(self, monkeypatch,  tmpdir):
         monkeypatch.chdir(tmpdir)

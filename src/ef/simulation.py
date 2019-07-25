@@ -261,8 +261,8 @@ class Simulation(SerializableH5):
                 end = [ga['axis_end_{}'.format(c)] for c in 'xyz']
                 r, R = (ga['{}_radius'.format(s)] for s in ('inner', 'outer'))
                 shape = Tube(start, end, r, R)
-            regions.append(InnerRegion(name, shape, ga['potential'], ga['total_absorbed_particles'],
-                                       ga['total_absorbed_charge']))
+            regions.append(InnerRegion(name, shape, float(ga['potential']), int(ga['total_absorbed_particles']),
+                                       float(ga['total_absorbed_charge'])))
 
         ef, mf = [], []
         for name, g in h5file['ExternalFields'].items():
