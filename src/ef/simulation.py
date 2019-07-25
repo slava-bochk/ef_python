@@ -25,7 +25,8 @@ class Simulation(SerializableH5):
     def __init__(self, time_grid, spat_mesh, inner_regions,
                  particle_sources,
                  electric_fields, magnetic_fields, particle_interaction_model,
-                 output_filename_prefix='', outut_filename_suffix='.h5', max_id=-1, particle_arrays=()):
+                 output_filename_prefix='', outut_filename_suffix='.h5', output_format="cpp",
+                 max_id=-1, particle_arrays=()):
         self.time_grid = time_grid
         self.spat_mesh = spat_mesh
         self.inner_regions = inner_regions
@@ -51,25 +52,31 @@ class Simulation(SerializableH5):
 
         self._output_filename_prefix = output_filename_prefix
         self._output_filename_suffix = outut_filename_suffix
+        self._output_format = output_format
         self.max_id = max_id
 
     @classmethod
-    def init_from_h5(cls, h5file, filename_prefix, filename_suffix):
+    def init_from_h5(cls, h5file, filename_prefix, filename_suffix, output_format):
         if 'SpatialMesh' in h5file:
-            simulation = cls.import_from_h5(h5file, filename_prefix, filename_suffix)
+            simulation = cls.import_from_h5(h5file, filename_prefix, filename_suffix, output_format)
         else:
             simulation = cls.load_h5(h5file)
             simulation._output_filename_prefix = filename_prefix
             simulation._output_filename_suffix = filename_suffix
+            simulation._output_format = output_format
         return simulation
 
     def start_pic_simulation(self):
         self.eval_and_write_fields_without_particles()
+        if self._output_format == "history":
+            self.create_history_file()
         self.generate_and_prepare_particles(initial=True)
         self.write_step_to_save()
         self.run_pic()
 
     def continue_pic_simulation(self):
+        if self._output_format == "history":
+            self.create_history_file()
         self.run_pic()
 
     def run_pic(self):
@@ -185,7 +192,7 @@ class Simulation(SerializableH5):
             self.write()
 
     @classmethod
-    def import_from_h5(self, h5file, filename_prefix, filename_suffix):
+    def import_from_h5(self, h5file, filename_prefix, filename_suffix, output_format):
         g = h5file['SpatialMesh']
         ga = g.attrs
         size = np.array([ga['{}_volume_size'.format(c)] for c in 'xyz']).reshape(3)
@@ -284,6 +291,7 @@ class Simulation(SerializableH5):
                           particle_sources=sources, electric_fields=ef, magnetic_fields=mf,
                           particle_interaction_model=pim,
                           output_filename_prefix=filename_prefix, outut_filename_suffix=filename_suffix,
+                          output_format=output_format,
                           max_id=max_id, particle_arrays=particles)
 
     def export_h5(self, h5file):
@@ -442,8 +450,7 @@ class Simulation(SerializableH5):
         file_name_to_write = self._output_filename_prefix + specific_name + self._output_filename_suffix
         h5file = h5py.File(file_name_to_write, mode="w")
         if not h5file:
-            print("Error: can't open file " + file_name_to_write + \
-                  "to save results!")
+            print("Error: can't open file " + file_name_to_write + "to save results!")
             print("Recheck \'output_filename_prefix\' key in config file.")
             print("Make sure the directory you want to save to exists.")
         print("Writing to file {}".format(file_name_to_write))
@@ -452,15 +459,105 @@ class Simulation(SerializableH5):
 
     def write(self):
         print("Writing step {} to file".format(self.time_grid.current_node))
-        self._write("{:07}_new".format(self.time_grid.current_node))
-        self._write("{:07}".format(self.time_grid.current_node), export=True)
+        if self._output_format == "python":
+            self._write("{:07}".format(self.time_grid.current_node))
+        elif self._output_format == "cpp":
+            self._write("{:07}".format(self.time_grid.current_node), export=True)
+        elif self._output_format == "history":
+            self.write_history()
+        elif self._output_format == "none":
+            pass
+        else:
+            raise ValueError("Unknown simulaiton output format.")
+
+    def create_history_file(self):
+        n_particles = sum(s.initial_number_of_particles +
+                              s.particles_to_generate_each_step * self.time_grid.total_nodes
+                              for s in self.particle_sources)
+        n_time = (self.time_grid.total_nodes - 1) // self.time_grid.node_to_save + 1
+        file_name_to_write = self._output_filename_prefix + 'history' + self._output_filename_suffix
+        h5file = h5py.File(file_name_to_write, mode="w")
+        if not h5file:
+            print("Error: can't open file " + file_name_to_write + "to save results!")
+            print("Recheck \'output_filename_prefix\' key in config file.")
+            print("Make sure the directory you want to save to exists.")
+        print("Creating history file {}".format(file_name_to_write))
+
+        self.save_h5(h5file)
+        h5file['/time'] = np.linspace(0, self.time_grid.total_time, n_time)
+        h5file['/particles/ids'] = np.arange(n_particles)
+        h5file['/particles/coordinates'] = [np.string_('x'), np.string_('y'), np.string_('z')]
+        h5file.create_dataset('/particles/position', (n_particles, n_time, 3))
+        h5file['/particles/position'].dims[0].label = 'id'
+        h5file['/particles/position'].dims.create_scale(h5file['/particles/ids'], 'ids')
+        h5file['/particles/position'].dims[0].attach_scale(h5file['/particles/ids'])
+        h5file['/particles/position'].dims[1].label = 'time'
+        h5file['/particles/position'].dims.create_scale(h5file['/time'], 'time')
+        h5file['/particles/position'].dims[1].attach_scale(h5file['/time'])
+        h5file['/particles/position'].dims[2].label = 'coordinates'
+        h5file['/particles/position'].dims.create_scale(h5file['/particles/coordinates'], 'coordinates')
+        h5file['/particles/position'].dims[2].attach_scale(h5file['/particles/coordinates'])
+        h5file.create_dataset('/particles/momentum', (n_particles, n_time, 3))
+        h5file['/particles/momentum'].dims[0].label = 'id'
+        h5file['/particles/momentum'].dims.create_scale(h5file['/particles/ids'], 'ids')
+        h5file['/particles/momentum'].dims[0].attach_scale(h5file['/particles/ids'])
+        h5file['/particles/momentum'].dims[1].label = 'time'
+        h5file['/particles/momentum'].dims.create_scale(h5file['/time'], 'time')
+        h5file['/particles/momentum'].dims[1].attach_scale(h5file['/time'])
+        h5file['/particles/momentum'].dims[2].label = 'coordinate'
+        h5file['/particles/momentum'].dims.create_scale(h5file['/particles/coordinates'], 'coordinates')
+        h5file['/particles/momentum'].dims[2].attach_scale(h5file['/particles/coordinates'])
+        h5file.create_dataset('/particles/mass', (n_particles,))
+        h5file['/particles/mass'].dims[0].label = 'id'
+        h5file['/particles/mass'].dims.create_scale(h5file['/particles/ids'], 'ids')
+        h5file['/particles/mass'].dims[0].attach_scale(h5file['/particles/ids'])
+        h5file.create_dataset('/particles/charge', (n_particles,))
+        h5file['/particles/charge'].dims[0].label = 'id'
+        h5file['/particles/charge'].dims.create_scale(h5file['/particles/ids'], 'ids')
+        h5file['/particles/charge'].dims[0].attach_scale(h5file['/particles/ids'])
+
+        if self.particle_interaction_model.pic:
+            h5file.create_dataset('/field/potential', (n_time, *self.spat_mesh.n_nodes))
+            h5file['/field/potential'].dims[0].label = 'time'
+            h5file['/field/potential'].dims.create_scale(h5file['/time'], 'time')
+            h5file['/field/potential'].dims[0].attach_scale(h5file['/time'])
+            for i, c in enumerate('xyz'):
+                h5file['/field/{}'.format(c)] = np.linspace(0, self.spat_mesh.size[i], self.spat_mesh.n_nodes[i])
+                h5file['/field/potential'].dims[i+1].label = c
+                h5file['/field/potential'].dims.create_scale(h5file['/field/{}'.format(c)], c)
+                h5file['/field/potential'].dims[i+1].attach_scale(h5file['/field/{}'.format(c)])
+
+        h5file.close()
+
+    def write_history(self):
+        file_name_to_write = self._output_filename_prefix + 'history' + self._output_filename_suffix
+        h5file = h5py.File(file_name_to_write, mode="r+")
+        if not h5file:
+            print("Error: can't open history file " + file_name_to_write + "to append results!")
+            print("Was it not created properly on simulation start?")
+        t = self.time_grid.current_node // self.time_grid.node_to_save
+        for p in self.particle_arrays:
+            for i, id in enumerate(p.ids):
+                h5file['/particles/position'][id, t] = p.positions[i]
+                h5file['/particles/momentum'][id, t] = p.momentums[i]
+                h5file['/particles/mass'][id] = p.mass
+                h5file['/particles/charge'][id] = p.charge
+        if self.particle_interaction_model.pic:
+            h5file['/field/potential'][t] = self.spat_mesh.potential
+        h5file.close()
 
     def eval_and_write_fields_without_particles(self):
         self.spat_mesh.clear_old_density_values()
         self.eval_potential_and_fields()
         print("Writing initial fields to file")
-        self._write("fieldsWithoutParticles_new")
-        self._write("fieldsWithoutParticles", export=True)
+        if self._output_format == "python":
+            self._write("fieldsWithoutParticles")
+        elif self._output_format == "cpp":
+            self._write("fieldsWithoutParticles", export=True)
+        elif self._output_format in ("none", "history"):
+            pass
+        else:
+            raise ValueError("Unknown simulaiton output format.")
 
     def consolidate_particle_arrays(self):
         particles_by_type = defaultdict(list)
