@@ -65,3 +65,10 @@ class ParticleArray(SerializableH5):
                                  np.array([g['momentum_{}'.format(c)] for c in 'xyz']),
                                  0, -1),
                              momentum_is_half_time_step_shifted=True)
+
+    def export_h5(self, g):
+        g['particle_id'] = self.ids
+        g.attrs['max_id'] = self.ids.max(initial=-1)
+        for i, c in enumerate('xyz'):
+            g['position_{}'.format(c)] = self.positions[:, i]
+            g['momentum_{}'.format(c)] = self.momentums[:, i]

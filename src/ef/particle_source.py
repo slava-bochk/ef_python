@@ -50,3 +50,10 @@ class ParticleSource(SerializableH5):
         return ParticleSource(name, shape, int(ga['initial_number_of_particles']),
                               int(ga['particles_to_generate_each_step']),
                               momentum, float(ga['temperature']), float(ga['charge']), float(ga['mass']))
+
+    def export_h5(self, g):
+        for k in 'temperature', 'charge', 'mass', 'initial_number_of_particles', 'particles_to_generate_each_step':
+            g.attrs[k] = [getattr(self, k)]
+        for i, c in enumerate('xyz'):
+            g.attrs['mean_momentum_{}'.format(c)] = [self.mean_momentum[i]]
+        self.shape.export_h5(g, region=False)

@@ -180,3 +180,13 @@ class SpatialMesh(SerializableH5):
             np.array([np.reshape(g['electric_field_{}'.format(c)], n_nodes) for c in 'xyz']),
             0, -1)
         return cls(MeshGrid(size, n_nodes), charge, potential, field)
+
+    def export_h5(self, g):
+        for i, c in enumerate('xyz'):
+            g.attrs['{}_volume_size'.format(c)] = [self.size[i]]
+            g.attrs['{}_cell_size'.format(c)] = [self.cell[i]]
+            g.attrs['{}_n_nodes'.format(c)] = [self.n_nodes[i]]
+            g['node_coordinates_{}'.format(c)] = self.node_coordinates[..., i].flatten()
+            g['electric_field_{}'.format(c)] = self.electric_field[..., i].flatten()
+        g['charge_density'] = self.charge_density.flatten()
+        g['potential'] = self.potential.flatten()

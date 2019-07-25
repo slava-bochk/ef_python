@@ -34,3 +34,8 @@ class InnerRegion(SerializableH5):
         name = g.name.split('/')[-1]
         return InnerRegion(name, shape, float(ga['potential']), int(ga['total_absorbed_particles']),
                            float(ga['total_absorbed_charge']))
+
+    def export_h5(self, g):
+        for k in 'potential', 'total_absorbed_particles', 'total_absorbed_charge':
+            g.attrs[k] = [getattr(self, k)]
+        self.shape.export_h5(g, region=True)
