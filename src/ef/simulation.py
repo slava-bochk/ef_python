@@ -365,7 +365,7 @@ class Simulation(SerializableH5):
         for s in self.inner_regions:
             sg = g.create_group(s.name)
             for k in 'potential', 'total_absorbed_particles', 'total_absorbed_charge':
-                sg.attrs[k] = getattr(s, k)
+                sg.attrs[k] = [getattr(s, k)]
             if s.shape.__class__ is Box:
                 geom = 'box'
                 sg.attrs['x_right'] = s.shape.origin[0]
