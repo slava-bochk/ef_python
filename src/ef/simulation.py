@@ -3,7 +3,6 @@ from collections import defaultdict
 import h5py
 import numpy as np
 
-from ef.config.components import Box, Cylinder, Tube, Sphere
 from ef.field import FieldZero, FieldSum, Field
 from ef.field.expression import FieldExpression
 from ef.field.on_grid import FieldOnGrid
@@ -308,8 +307,8 @@ class Simulation(SerializableH5):
 
     def create_history_file(self):
         n_particles = sum(s.initial_number_of_particles +
-                              s.particles_to_generate_each_step * self.time_grid.total_nodes
-                              for s in self.particle_sources)
+                          s.particles_to_generate_each_step * self.time_grid.total_nodes
+                          for s in self.particle_sources)
         n_time = (self.time_grid.total_nodes - 1) // self.time_grid.node_to_save + 1
         file_name_to_write = self._output_filename_prefix + 'history' + self._output_filename_suffix
         h5file = h5py.File(file_name_to_write, mode="w")
@@ -359,9 +358,9 @@ class Simulation(SerializableH5):
             h5file['/field/potential'].dims[0].attach_scale(h5file['/time'])
             for i, c in enumerate('xyz'):
                 h5file['/field/{}'.format(c)] = np.linspace(0, self.spat_mesh.size[i], self.spat_mesh.n_nodes[i])
-                h5file['/field/potential'].dims[i+1].label = c
+                h5file['/field/potential'].dims[i + 1].label = c
                 h5file['/field/potential'].dims.create_scale(h5file['/field/{}'.format(c)], c)
-                h5file['/field/potential'].dims[i+1].attach_scale(h5file['/field/{}'.format(c)])
+                h5file['/field/potential'].dims[i + 1].attach_scale(h5file['/field/{}'.format(c)])
 
         h5file.close()
 
