@@ -1,5 +1,6 @@
 from math import sqrt
 
+import numpy as np
 from numpy.random import RandomState
 
 from ef.particle_array import ParticleArray
@@ -38,3 +39,14 @@ class ParticleSource(SerializableH5):
         pos = self.shape.generate_uniform_random_posititons(self._generator, num_of_particles)
         mom = self._generator.normal(self.mean_momentum, sqrt(self.mass * self.temperature), (num_of_particles, 3))
         return ParticleArray(range(num_of_particles), self.charge, self.mass, pos, mom)
+
+    @staticmethod
+    def import_h5(g):
+        from ef.config.components import Shape
+        ga = g.attrs
+        shape = Shape.import_h5(g, region=False)
+        name = g.name.split('/')[-1]
+        momentum = np.array([ga['mean_momentum_{}'.format(c)] for c in 'xyz']).reshape(3)
+        return ParticleSource(name, shape, int(ga['initial_number_of_particles']),
+                              int(ga['particles_to_generate_each_step']),
+                              momentum, float(ga['temperature']), float(ga['charge']), float(ga['mass']))

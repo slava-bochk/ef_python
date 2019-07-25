@@ -30,3 +30,7 @@ class ParticleInteractionModel(SerializableH5):
             self.particle_interaction_model = particle_interaction_model
         else:
             self.particle_interaction_model = Model[particle_interaction_model]
+
+    @staticmethod
+    def import_h5(g):
+        return ParticleInteractionModel(g.attrs['particle_interaction_model'].decode('utf8'))

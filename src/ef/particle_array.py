@@ -53,3 +53,15 @@ class ParticleArray(SerializableH5):
 
     def boris_update_momentum_no_mgn(self, dt, total_el_field):
         self.momentums += self.charge * dt * np.asarray(total_el_field)
+
+    @staticmethod
+    def import_h5(g):
+        ga = g.attrs
+        return ParticleArray(ids=g['particle_id'], charge=float(ga['charge']), mass=float(ga['mass']),
+                             positions=np.moveaxis(
+                                 np.array([g['position_{}'.format(c)] for c in 'xyz']),
+                                 0, -1),
+                             momentums=np.moveaxis(
+                                 np.array([g['momentum_{}'.format(c)] for c in 'xyz']),
+                                 0, -1),
+                             momentum_is_half_time_step_shifted=True)

@@ -168,3 +168,15 @@ class SpatialMesh(SerializableH5):
         return np.all(self.potential[0] == p) and np.all(self.potential[-1] == p) and \
                np.all(self.potential[:, 0] == p) and np.all(self.potential[:, -1] == p) and \
                np.all(self.potential[:, :, 0] == p) and np.all(self.potential[:, :, -1] == p)
+
+    @classmethod
+    def import_h5(cls, g):
+        ga = g.attrs
+        size = np.array([ga['{}_volume_size'.format(c)] for c in 'xyz']).reshape(3)
+        n_nodes = np.array([ga['{}_n_nodes'.format(c)] for c in 'xyz']).reshape(3)
+        charge = np.reshape(g['charge_density'], n_nodes)
+        potential = np.reshape(g['potential'], n_nodes)
+        field = np.moveaxis(
+            np.array([np.reshape(g['electric_field_{}'.format(c)], n_nodes) for c in 'xyz']),
+            0, -1)
+        return cls(MeshGrid(size, n_nodes), charge, potential, field)

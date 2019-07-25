@@ -21,6 +21,42 @@ class Shape(ConfigComponent, SerializableH5):
     def generate_uniform_random_posititons(self, random_state, n):
         raise NotImplementedError()
 
+    @staticmethod
+    def import_h5(g, region):
+        ga = g.attrs
+        if region:
+            gt = ga['object_type']
+            if gt == b'box':
+                origin = np.array([ga['x_right'], ga['y_bottom'], ga['z_near']])
+                size = np.array([ga['x_left'], ga['y_top'], ga['z_far']]) - origin
+                return Box(origin, size)
+            elif gt == b'sphere':
+                return Sphere([ga['origin_{}'.format(c)] for c in 'xyz'], ga['radius'])
+            elif gt == b'cylinder':
+                start = [ga['axis_start_{}'.format(c)] for c in 'xyz']
+                end = [ga['axis_end_{}'.format(c)] for c in 'xyz']
+                return Cylinder(start, end, ga['radius'])
+            elif gt == b'tube':
+                start = [ga['axis_start_{}'.format(c)] for c in 'xyz']
+                end = [ga['axis_end_{}'.format(c)] for c in 'xyz']
+                r, R = (ga['{}_radius'.format(s)] for s in ('inner', 'outer'))
+                return Tube(start, end, r, R)
+        else:
+            gt = ga['geometry_type']
+            if gt == b'box':
+                origin = np.array([ga['box_x_right'], ga['box_y_bottom'], ga['box_z_near']]).reshape(3)
+                size = np.array([ga['box_x_left'], ga['box_y_top'], ga['box_z_far']]).reshape(3) - origin
+                return Box(origin, size)
+            elif gt == b'cylinder':
+                start = np.array([ga['cylinder_axis_start_{}'.format(c)] for c in 'xyz']).reshape(3)
+                end = np.array([ga['cylinder_axis_end_{}'.format(c)] for c in 'xyz']).reshape(3)
+                return Cylinder(start, end, ga['cylinder_radius'])
+            elif gt == b'tube_along_z':
+                x, y = (ga['tube_along_z_axis_{}'.format(c)] for c in 'xy')
+                sz = ga['tube_along_z_axis_start_z']
+                ez = ga['tube_along_z_axis_end_z']
+                r, R = (ga['tube_along_z_{}_radius'.format(s)] for s in ('inner', 'outer'))
+                return Tube((x, y, sz), (x, y, ez), r, R)
 
 def rotation_from_z(vector):
     """
