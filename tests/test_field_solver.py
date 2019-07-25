@@ -10,19 +10,6 @@ from ef.inner_region import InnerRegion
 
 class TestFieldSolver:
 
-    def test_eval_field_from_potential(self):
-        mesh = SpatialMeshConf((1.5, 2, 1), (0.5, 1, 1)).make(BoundaryConditionsConf())
-        mesh.potential = np.stack([np.array([[0., 0, 0],
-                                             [1, 2, 3],
-                                             [4, 3, 2],
-                                             [4, 4, 4]]), np.zeros((4, 3))], -1)
-        FieldSolver.eval_fields_from_potential(mesh)
-        expected = np.array([[[[-2, 0, 0], [0, 0, 0]], [[-4, 0, 0], [0, 0, 0]], [[-6, 0, 0], [0, 0, 0]]],
-                             [[[-4, -1, 1], [0, 0, 1]], [[-3, -1, 2], [0, 0, 2]], [[-2, -1, 3], [0, 0, 3]]],
-                             [[[-3, 1, 4], [0, 0, 4]], [[-2, 1, 3], [0, 0, 3]], [[-1, 1, 2], [0, 0, 2]]],
-                             [[[0, 0, 4], [0, 0, 4]], [[-2, 0, 4], [0, 0, 4]], [[-4, 0, 4], [0, 0, 4]]]])
-        assert_array_equal(mesh.electric_field, expected)
-
     def test_global_index(self):
         double_index = FieldSolver.double_index(np.array((9, 10, 6)))
         for i in range(7):
@@ -40,17 +27,17 @@ class TestFieldSolver:
     def test_init_rhs(self):
         mesh = SpatialMeshConf((4, 3, 3)).make(BoundaryConditionsConf())
         solver = FieldSolver(mesh, [])
-        solver.init_rhs_vector_in_full_domain(mesh)
+        solver.init_rhs_vector_in_full_domain()
         assert_array_equal(solver.rhs, np.zeros(3 * 2 * 2))
 
         mesh = SpatialMeshConf((4, 3, 3)).make(BoundaryConditionsConf(-2))
         solver = FieldSolver(mesh, [])
-        solver.init_rhs_vector_in_full_domain(mesh)
+        solver.init_rhs_vector_in_full_domain()
         assert_array_equal(solver.rhs, [6, 4, 6, 6, 4, 6, 6, 4, 6, 6, 4, 6])  # what
 
         mesh = SpatialMeshConf((4, 4, 5)).make(BoundaryConditionsConf(-2))
         solver = FieldSolver(mesh, [])
-        solver.init_rhs_vector_in_full_domain(mesh)
+        solver.init_rhs_vector_in_full_domain()
         assert_array_equal(solver.rhs, [6, 4, 6, 4, 2, 4, 6, 4, 6,
                                         4, 2, 4, 2, 0, 2, 4, 2, 4,
                                         4, 2, 4, 2, 0, 2, 4, 2, 4,
@@ -58,7 +45,7 @@ class TestFieldSolver:
 
         mesh = SpatialMeshConf((8, 12, 5), (2, 3, 1)).make(BoundaryConditionsConf(-1))
         solver = FieldSolver(mesh, [])
-        solver.init_rhs_vector_in_full_domain(mesh)
+        solver.init_rhs_vector_in_full_domain()
         assert_array_equal(solver.rhs, [49, 40, 49, 45, 36, 45, 49, 40, 49,
                                         13, 4, 13, 9, 0, 9, 13, 4, 13,
                                         13, 4, 13, 9, 0, 9, 13, 4, 13,
@@ -71,19 +58,19 @@ class TestFieldSolver:
                                         [[0, 0, 0, 0], [0, 3, 4, 0], [0, 0, -1, 0], [0, 0, 0, 0]],
                                         [[0, 0, 0, 0], [0, 5, 6, 0], [0, -1, 0, 0], [0, 0, 0, 0]],
                                         [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]])
-        solver.init_rhs_vector_in_full_domain(mesh)
+        solver.init_rhs_vector_in_full_domain()
         assert_allclose(solver.rhs, -np.array([1, 3, 5, -1, 0, -1, 2, 4, 6, 0, -1, 0]) * np.pi * 4 * 36)
 
         mesh = SpatialMeshConf((4, 6, 9), (1, 2, 3)).make(BoundaryConditionsConf())
         solver = FieldSolver(mesh, [])
-        region = InnerRegion('test', Box((1, 2, 3), (1, 2, 3)), 3)
-        solver.init_rhs_vector(mesh, [region])
+        solver.inner_regions = [InnerRegion('test', Box((1, 2, 3), (1, 2, 3)), 3)]
+        solver.init_rhs_vector()
         assert_array_equal(solver.rhs, [3, 3, 0, 3, 3, 0, 3, 3, 0, 3, 3, 0])
 
     def test_zero_nondiag_inside_objects(self):
         mesh = SpatialMeshConf((4, 6, 9), (1, 2, 3)).make(BoundaryConditionsConf())
         solver = FieldSolver(mesh, [])
-        region = InnerRegion('test', Box((1, 2, 3), (1, 2, 3)), 3)
+        solver.inner_regions = [InnerRegion('test', Box((1, 2, 3), (1, 2, 3)), 3)]
 
         a = csr_matrix(np.full((12, 12), 2))
         assert_array_equal(a.toarray(), [[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
@@ -98,7 +85,7 @@ class TestFieldSolver:
                                          [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
                                          [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
                                          [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]])
-        result = solver.zero_nondiag_for_nodes_inside_objects(a, mesh, [region])
+        result = solver.zero_nondiag_for_nodes_inside_objects(a)
         assert_array_equal(result.toarray(), [[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                               [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                               [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
@@ -125,7 +112,7 @@ class TestFieldSolver:
                                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                  [0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 6, 0],
                                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]))
-        result = solver.zero_nondiag_for_nodes_inside_objects(a, mesh, [region])
+        result = solver.zero_nondiag_for_nodes_inside_objects(a)
         assert_array_equal(result.toarray(), [[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                               [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                               [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -208,7 +195,7 @@ class TestFieldSolver:
     def test_construct_equation_matrix(self):
         mesh = SpatialMeshConf((4, 6, 9), (1, 2, 3)).make(BoundaryConditionsConf())
         solver = FieldSolver(mesh, [])
-        solver.construct_equation_matrix(mesh, [])
+        solver.construct_equation_matrix()
         d = -2 * (2 * 2 * 3 * 3 + 3 * 3 + 2 * 2)
         x = 2 * 2 * 3 * 3
         y = 3 * 3
@@ -230,7 +217,7 @@ class TestFieldSolver:
         mesh = SpatialMeshConf((4, 6, 9), (1, 2, 3)).make(BoundaryConditionsConf())
         solver = FieldSolver(mesh, [])
         solver.phi_vec = np.array(range(1, 3 * 2 * 2 + 1))
-        solver.transfer_solution_to_spat_mesh(mesh)
+        solver.transfer_solution_to_spat_mesh()
         assert_array_equal(mesh.potential[1:-1, 1:-1, 1:-1], [[[1, 7], [4, 10]],
                                                               [[2, 8], [5, 11]],
                                                               [[3, 9], [6, 12]]])

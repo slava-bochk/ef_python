@@ -97,8 +97,8 @@ class Simulation(SerializableH5):
         self.spat_mesh.weight_particles_charge_to_mesh(self.particle_arrays)
 
     def eval_potential_and_fields(self):
-        self._field_solver.eval_potential(self.spat_mesh, self.inner_regions)
-        self._field_solver.eval_fields_from_potential(self.spat_mesh)
+        self._field_solver.eval_potential()
+        self.spat_mesh.eval_field_from_potential()
 
     def push_particles(self):
         self.boris_integration(self.time_grid.time_step_size)
