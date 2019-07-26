@@ -45,3 +45,14 @@ class TimeGrid(SerializableH5):
     def update_to_next_step(self):
         self.current_node += 1
         self.current_time += self.time_step_size
+
+    @staticmethod
+    def import_h5(g):
+        ga = g.attrs
+        return TimeGrid(float(ga['total_time']), float(ga['time_step_size']), float(ga['time_save_step']),
+                        float(ga['current_time']), int(ga['current_node']))
+
+    def export_h5(self, g):
+        for k in ['total_time', 'current_time', 'time_step_size', 'time_save_step', 'total_nodes', 'current_node',
+                  'node_to_save']:
+            g.attrs[k] = [getattr(self, k)]

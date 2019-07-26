@@ -21,6 +21,43 @@ class Shape(ConfigComponent, SerializableH5):
     def generate_uniform_random_posititons(self, random_state, n):
         raise NotImplementedError()
 
+    @staticmethod
+    def import_h5(g, region):
+        ga = g.attrs
+        if region:
+            gt = ga['object_type']
+            if gt == b'box':
+                origin = np.array([ga['x_right'], ga['y_bottom'], ga['z_near']])
+                size = np.array([ga['x_left'], ga['y_top'], ga['z_far']]) - origin
+                return Box(origin, size)
+            elif gt == b'sphere':
+                return Sphere([ga['origin_{}'.format(c)] for c in 'xyz'], ga['radius'])
+            elif gt == b'cylinder':
+                start = [ga['axis_start_{}'.format(c)] for c in 'xyz']
+                end = [ga['axis_end_{}'.format(c)] for c in 'xyz']
+                return Cylinder(start, end, ga['radius'])
+            elif gt == b'tube':
+                start = [ga['axis_start_{}'.format(c)] for c in 'xyz']
+                end = [ga['axis_end_{}'.format(c)] for c in 'xyz']
+                r, R = (ga['{}_radius'.format(s)] for s in ('inner', 'outer'))
+                return Tube(start, end, r, R)
+        else:
+            gt = ga['geometry_type']
+            if gt == b'box':
+                origin = np.array([ga['box_x_right'], ga['box_y_bottom'], ga['box_z_near']]).reshape(3)
+                size = np.array([ga['box_x_left'], ga['box_y_top'], ga['box_z_far']]).reshape(3) - origin
+                return Box(origin, size)
+            elif gt == b'cylinder':
+                start = np.array([ga['cylinder_axis_start_{}'.format(c)] for c in 'xyz']).reshape(3)
+                end = np.array([ga['cylinder_axis_end_{}'.format(c)] for c in 'xyz']).reshape(3)
+                return Cylinder(start, end, ga['cylinder_radius'])
+            elif gt == b'tube_along_z':
+                x, y = (ga['tube_along_z_axis_{}'.format(c)] for c in 'xy')
+                sz = ga['tube_along_z_axis_start_z']
+                ez = ga['tube_along_z_axis_end_z']
+                r, R = (ga['tube_along_z_{}_radius'.format(s)] for s in ('inner', 'outer'))
+                return Tube((x, y, sz), (x, y, ez), r, R)
+
 
 def rotation_from_z(vector):
     """
@@ -53,6 +90,24 @@ class Box(Shape):
     def generate_uniform_random_posititons(self, random_state, n):
         return random_state.uniform(self.origin, self.origin + self.size, (n, 3))
 
+    def export_h5(self, g, region):
+        if region:
+            g.attrs['x_right'] = self.origin[0]
+            g.attrs['x_left'] = self.origin[0] + self.size[0]
+            g.attrs['y_bottom'] = self.origin[1]
+            g.attrs['y_top'] = self.origin[1] + self.size[1]
+            g.attrs['z_near'] = self.origin[2]
+            g.attrs['z_far'] = self.origin[2] + self.size[2]
+            g.attrs['object_type'] = np.string_(b"box\x00")
+        else:
+            g.attrs['box_x_right'] = self.origin[0]
+            g.attrs['box_x_left'] = self.origin[0] + self.size[0]
+            g.attrs['box_y_bottom'] = self.origin[1]
+            g.attrs['box_y_top'] = self.origin[1] + self.size[1]
+            g.attrs['box_z_near'] = self.origin[2]
+            g.attrs['box_z_far'] = self.origin[2] + self.size[2]
+            g.attrs['geometry_type'] = np.string_(b"box\x00")
+
 
 class Cylinder(Shape):
     def __init__(self, start=(0, 0, 0), end=(1, 0, 0), radius=1):
@@ -83,6 +138,20 @@ class Cylinder(Shape):
         z = random_state.uniform(0.0, norm(self.end - self.start), n)
         points = np.stack((x, y, z), -1)
         return rowan.rotate(self._rotation, points) + self.start
+
+    def export_h5(self, g, region):
+        if region:
+            g.attrs['radius'] = self.radius
+            for i, c in enumerate('xyz'):
+                g.attrs['axis_start_{}'.format(c)] = self.start[i]
+                g.attrs['axis_end_{}'.format(c)] = self.end[i]
+            g.attrs['object_type'] = np.string_(b"cylinder\x00")
+        else:
+            g.attrs['cylinder_radius'] = self.radius
+            for i, c in enumerate('xyz'):
+                g.attrs['cylinder_axis_start_{}'.format(c)] = self.start[i]
+                g.attrs['cylinder_axis_end_{}'.format(c)] = self.end[i]
+            g.attrs['geometry_type'] = np.string_(b"cylinder\x00")
 
 
 class Tube(Shape):
@@ -116,6 +185,25 @@ class Tube(Shape):
         points = np.stack((x, y, z), -1)
         return rowan.rotate(self._rotation, points) + self.start
 
+    def export_h5(self, g, region):
+        if region:
+            g.attrs['inner_radius'] = self.inner_radius
+            g.attrs['outer_radius'] = self.outer_radius
+            for i, c in enumerate('xyz'):
+                g.attrs['axis_start_{}'.format(c)] = self.start[i]
+                g.attrs['axis_end_{}'.format(c)] = self.end[i]
+            g.attrs['object_type'] = np.string_(b"tube\x00")
+        else:
+            if np.any((self.start != self.end)[:2]):
+                raise ValueError('Cannot export tube particle source not along z-axis')
+            g.attrs['tube_along_z_inner_radius'] = self.inner_radius
+            g.attrs['tube_along_z_outer_radius'] = self.outer_radius
+            g.attrs['tube_along_z_axis_x'] = self.start[0]
+            g.attrs['tube_along_z_axis_y'] = self.start[1]
+            g.attrs['tube_along_z_axis_start_z'] = self.start[2]
+            g.attrs['tube_along_z_axis_end_z'] = self.end[2]
+            g.attrs['geometry_type'] = np.string_(b"tube_along_z\x00")
+
 
 class Sphere(Shape):
     def __init__(self, origin=(0, 0, 0), radius=1):
@@ -134,6 +222,15 @@ class Sphere(Shape):
             p = p.compress(self.are_positions_inside(p), 0)
             if len(p) > n:
                 return p[:n]
+
+    def export_h5(self, g, region):
+        if region:
+            g.attrs['radius'] = self.radius
+            for i, c in enumerate('xyz'):
+                g.attrs['origin_{}'.format(c)] = self.origin[i]
+            g.attrs['object_type'] = np.string_(b"sphere\x00")
+        else:
+            raise ValueError('Cannot export spherical particle source')
 
 
 class Cone(Shape):

@@ -3,8 +3,7 @@ from collections import defaultdict
 import h5py
 import numpy as np
 
-from ef.config.components import Box, Cylinder, Tube, Sphere
-from ef.field import FieldZero, FieldSum
+from ef.field import FieldZero, FieldSum, Field
 from ef.field.expression import FieldExpression
 from ef.field.on_grid import FieldOnGrid
 from ef.field.particles import FieldParticles
@@ -14,7 +13,7 @@ from ef.inner_region import InnerRegion
 from ef.particle_array import ParticleArray
 from ef.particle_interaction_model import ParticleInteractionModel
 from ef.particle_source import ParticleSource
-from ef.spatial_mesh import SpatialMesh, MeshGrid
+from ef.spatial_mesh import SpatialMesh
 from ef.time_grid import TimeGrid
 from ef.util.physical_constants import speed_of_light
 from ef.util.serializable_h5 import SerializableH5
@@ -191,208 +190,44 @@ class Simulation(SerializableH5):
         if (current_step % step_to_save) == 0:
             self.write()
 
-    @classmethod
-    def import_from_h5(self, h5file, filename_prefix, filename_suffix, output_format):
-        g = h5file['SpatialMesh']
-        ga = g.attrs
-        size = np.array([ga['{}_volume_size'.format(c)] for c in 'xyz']).reshape(3)
-        n_nodes = np.array([ga['{}_n_nodes'.format(c)] for c in 'xyz']).reshape(3)
-        charge = np.reshape(g['charge_density'], n_nodes)
-        potential = np.reshape(g['potential'], n_nodes)
-        field = np.moveaxis(
-            np.array([np.reshape(g['electric_field_{}'.format(c)], n_nodes) for c in 'xyz']),
-            0, -1)
-        mesh = SpatialMesh(MeshGrid(size, n_nodes), charge, potential, field)
-
-        g = h5file['TimeGrid']
-        ga = g.attrs
-        time_grid = TimeGrid(float(ga['total_time']), float(ga['time_step_size']), float(ga['time_save_step']),
-                             float(ga['current_time']), int(ga['current_node']))
-
-        sources = []
-        particles = []
-        for name, g in h5file['ParticleSources'].items():
-            ga = g.attrs
-            gt = ga['geometry_type']
-            if gt == b'box':
-                origin = np.array([ga['box_x_right'], ga['box_y_bottom'], ga['box_z_near']]).reshape(3)
-                size = np.array([ga['box_x_left'], ga['box_y_top'], ga['box_z_far']]).reshape(3) - origin
-                shape = Box(origin, size)
-            elif gt == b'cylinder':
-                start = np.array([ga['cylinder_axis_start_{}'.format(c)] for c in 'xyz']).reshape(3)
-                end = np.array([ga['cylinder_axis_end_{}'.format(c)] for c in 'xyz']).reshape(3)
-                shape = Cylinder(start, end, ga['cylinder_radius'])
-            elif gt == b'tube_along_z':
-                x, y = (ga['tube_along_z_axis_{}'.format(c)] for c in 'xy')
-                sz = ga['tube_along_z_axis_start_z']
-                ez = ga['tube_along_z_axis_end_z']
-                r, R = (ga['tube_along_z_{}_radius'.format(s)] for s in ('inner', 'outer'))
-                shape = Tube((x, y, sz), (x, y, ez), r, R)
-            momentum = np.array([ga['mean_momentum_{}'.format(c)] for c in 'xyz']).reshape(3)
-            sources.append(ParticleSource(name, shape, int(ga['initial_number_of_particles']),
-                                          int(ga['particles_to_generate_each_step']),
-                                          momentum, float(ga['temperature']), float(ga['charge']), float(ga['mass'])))
-            particles.append(ParticleArray(ids=g['particle_id'], charge=float(ga['charge']), mass=float(ga['mass']),
-                                           positions=np.moveaxis(
-                                               np.array([g['position_{}'.format(c)] for c in 'xyz']),
-                                               0, -1),
-                                           momentums=np.moveaxis(
-                                               np.array([g['momentum_{}'.format(c)] for c in 'xyz']),
-                                               0, -1),
-                                           momentum_is_half_time_step_shifted=True))
+    @staticmethod
+    def import_from_h5(h5file, filename_prefix, filename_suffix, output_format):
+        fields = [Field.import_h5(g) for g in h5file['ExternalFields'].values()]
+        sources = [ParticleSource.import_h5(g) for g in h5file['ParticleSources'].values()]
+        particles = [ParticleArray.import_h5(g) for g in h5file['ParticleSources'].values()]
         max_id = int(np.max([p.ids for p in particles], initial=-1))
-
-        regions = []
-        for name, g in h5file['InnerRegions'].items():
-            ga = g.attrs
-            gt = ga['object_type']
-            if gt == b'box':
-                origin = np.array([ga['x_right'], ga['y_bottom'], ga['z_near']])
-                size = np.array([ga['x_left'], ga['y_top'], ga['z_far']]) - origin
-                shape = Box(origin, size)
-            elif gt == b'sphere':
-                shape = Sphere([ga['origin_{}'.format(c)] for c in 'xyz'], ga['radius'])
-            elif gt == b'cylinder':
-                start = [ga['axis_start_{}'.format(c)] for c in 'xyz']
-                end = [ga['axis_end_{}'.format(c)] for c in 'xyz']
-                shape = Cylinder(start, end, ga['radius'])
-            elif gt == b'tube':
-                start = [ga['axis_start_{}'.format(c)] for c in 'xyz']
-                end = [ga['axis_end_{}'.format(c)] for c in 'xyz']
-                r, R = (ga['{}_radius'.format(s)] for s in ('inner', 'outer'))
-                shape = Tube(start, end, r, R)
-            regions.append(InnerRegion(name, shape, ga['potential'], ga['total_absorbed_particles'],
-                                       ga['total_absorbed_charge']))
-
-        ef, mf = [], []
-        for name, g in h5file['ExternalFields'].items():
-            ga = g.attrs
-            ft = ga['field_type']
-            if ft == b'electric_uniform':
-                ef.append(FieldUniform(name, 'electric',
-                                       np.array([ga['electric_uniform_field_{}'.format(c)] for c in 'xyz']).reshape(3)))
-            elif ft == b'electric_tinyexpr':
-                ef.append(
-                    FieldExpression(name, 'electric',
-                                    *[ga['electric_tinyexpr_field_{}'.format(c)].decode('utf8') for c in 'xyz']))
-            elif ft == b'electric_on_regular_grid':
-                ef.append(FieldOnGrid(name, 'electric', ga['electric_h5filename'].decode('utf8')))
-            elif ft == b'magnetic_uniform':
-                mf.append(FieldUniform(name, 'magnetic',
-                                       np.array([ga['magnetic_uniform_field_{}'.format(c)] for c in 'xyz']).reshape(3)))
-            elif ft == b'magnetic_tinyexpr':
-                mf.append(FieldExpression(name, 'magnetic',
-                                          *[ga['magnetic_tinyexpr_field_{}'.format(c)].decode('utf8') for c in 'xyz']))
-
-        pim = ParticleInteractionModel(
-            h5file['ParticleInteractionModel'].attrs['particle_interaction_model'].decode('utf8'))
-
-        return Simulation(time_grid=time_grid, spat_mesh=mesh, inner_regions=regions,
-                          particle_sources=sources, electric_fields=ef, magnetic_fields=mf,
-                          particle_interaction_model=pim,
-                          output_filename_prefix=filename_prefix, outut_filename_suffix=filename_suffix,
-                          output_format=output_format,
-                          max_id=max_id, particle_arrays=particles)
+        return Simulation(
+            time_grid=TimeGrid.import_h5(h5file['TimeGrid']),
+            spat_mesh=SpatialMesh.import_h5(h5file['SpatialMesh']),
+            inner_regions=[InnerRegion.import_h5(g) for g in h5file['InnerRegions'].values()],
+            electric_fields=[f for f in fields if f.electric_or_magnetic == 'electric'],
+            magnetic_fields=[f for f in fields if f.electric_or_magnetic == 'magnetic'],
+            particle_interaction_model=ParticleInteractionModel.import_h5(h5file['ParticleInteractionModel']),
+            particle_sources=sources, particle_arrays=particles,
+            output_filename_prefix=filename_prefix,
+            outut_filename_suffix=filename_suffix,
+            output_format=output_format,
+            max_id=max_id,
+        )
 
     def export_h5(self, h5file):
-        g = h5file.create_group('SpatialMesh')
-        for i, c in enumerate('xyz'):
-            g.attrs['{}_volume_size'.format(c)] = [self.spat_mesh.size[i]]
-            g.attrs['{}_cell_size'.format(c)] = [self.spat_mesh.cell[i]]
-            g.attrs['{}_n_nodes'.format(c)] = [self.spat_mesh.n_nodes[i]]
-            g['node_coordinates_{}'.format(c)] = self.spat_mesh.node_coordinates[..., i].flatten()
-            g['electric_field_{}'.format(c)] = self.spat_mesh.electric_field[..., i].flatten()
-        g['charge_density'] = self.spat_mesh.charge_density.flatten()
-        g['potential'] = self.spat_mesh.potential.flatten()
-
-        g = h5file.create_group('TimeGrid')
-        for k in 'total_time', 'current_time', 'time_step_size', 'time_save_step', \
-                 'total_nodes', 'current_node', 'node_to_save':
-            g.attrs[k] = [getattr(self.time_grid, k)]
-
+        self.spat_mesh.export_h5(h5file.create_group('SpatialMesh'))
+        self.time_grid.export_h5(h5file.create_group('TimeGrid'))
         g = h5file.create_group('ParticleSources')
         g.attrs['number_of_sources'] = [len(self.particle_sources)]
-        for i, s in enumerate(self.particle_sources):
-            sg = g.create_group(s.name)
-            for k in 'temperature', 'charge', 'mass', 'initial_number_of_particles', 'particles_to_generate_each_step':
-                sg.attrs[k] = [getattr(s, k)]
-            for i, c in enumerate('xyz'):
-                sg.attrs['mean_momentum_{}'.format(c)] = [s.mean_momentum[i]]
-            if s.shape.__class__ is Box:
-                geom = 'box'
-                sg.attrs['box_x_right'] = s.shape.origin[0]
-                sg.attrs['box_x_left'] = s.shape.origin[0] + s.shape.size[0]
-                sg.attrs['box_y_bottom'] = s.shape.origin[1]
-                sg.attrs['box_y_top'] = s.shape.origin[1] + s.shape.size[1]
-                sg.attrs['box_z_near'] = s.shape.origin[2]
-                sg.attrs['box_z_far'] = s.shape.origin[2] + s.shape.size[2]
-            elif s.shape.__class__ is Cylinder:
-                geom = 'cylinder'
-                sg.attrs['cylinder_radius'] = s.shape.radius
-                for i, c in enumerate('xyz'):
-                    sg.attrs['cylinder_axis_start_{}'.format(c)] = s.shape.start[i]
-                    sg.attrs['cylinder_axis_end_{}'.format(c)] = s.shape.end[i]
-            elif s.shape.__class__ is Tube:
-                geom = 'tube_along_z'
-                sg.attrs['tube_along_z_inner_radius'] = s.shape.inner_radius
-                sg.attrs['tube_along_z_outer_radius'] = s.shape.outer_radius
-                sg.attrs['tube_along_z_axis_x'] = s.shape.start[0]
-                sg.attrs['tube_along_z_axis_y'] = s.shape.start[1]
-                sg.attrs['tube_along_z_axis_start_z'] = s.shape.start[2]
-                sg.attrs['tube_along_z_axis_end_z'] = s.shape.end[2]
-            sg.attrs['geometry_type'] = np.string_(geom.encode('utf8') + b"\x00")
-
+        for s in self.particle_sources:
+            s.export_h5(g.create_group(s.name))
         for p in self.particle_arrays:
             s = next(s for s in self.particle_sources if s.charge == p.charge and s.mass == p.mass)
-            sg = g[s.name]
-            sg['particle_id'] = p.ids
-            sg.attrs['max_id'] = p.ids.max()
-            for i, c in enumerate('xyz'):
-                sg['position_{}'.format(c)] = p.positions[:, i]
-                sg['momentum_{}'.format(c)] = p.momentums[:, i]
-
-        for i, s in enumerate(self.particle_sources):
-            sg = g[s.name]
-            if 'particle_id' not in sg:
-                sg['particle_id'] = np.zeros((0,))
-                sg.attrs['max_id'] = 0
-                for c in 'xyz':
-                    sg['position_{}'.format(c)] = np.zeros((0, 3))
-                    sg['momentum_{}'.format(c)] = np.zeros((0, 3))
+            p.export_h5(g[s.name])
+        for s in self.particle_sources:
+            if 'particle_id' not in g[s.name]:
+                ParticleArray([], s.charge, s.mass, np.empty((0, 3)), np.empty((0, 3)), True).export_h5(g[s.name])
 
         g = h5file.create_group('InnerRegions')
-        g.attrs['number_of_regions'] = len(self.inner_regions)
+        g.attrs['number_of_regions'] = [len(self.inner_regions)]
         for s in self.inner_regions:
-            sg = g.create_group(s.name)
-            for k in 'potential', 'total_absorbed_particles', 'total_absorbed_charge':
-                sg.attrs[k] = getattr(s, k)
-            if s.shape.__class__ is Box:
-                geom = 'box'
-                sg.attrs['x_right'] = s.shape.origin[0]
-                sg.attrs['x_left'] = s.shape.origin[0] + s.shape.size[0]
-                sg.attrs['y_bottom'] = s.shape.origin[1]
-                sg.attrs['y_top'] = s.shape.origin[1] + s.shape.size[1]
-                sg.attrs['z_near'] = s.shape.origin[2]
-                sg.attrs['z_far'] = s.shape.origin[2] + s.shape.size[2]
-            elif s.shape.__class__ is Sphere:
-                geom = 'sphere'
-                sg.attrs['radius'] = s.shape.radius
-                for i, c in enumerate('xyz'):
-                    sg.attrs['origin_{}'.format(c)] = s.shape.origin[i]
-            elif s.shape.__class__ is Cylinder:
-                geom = 'cylinder'
-                sg.attrs['radius'] = s.shape.radius
-                for i, c in enumerate('xyz'):
-                    sg.attrs['axis_start_{}'.format(c)] = s.shape.start[i]
-                    sg.attrs['axis_end_{}'.format(c)] = s.shape.end[i]
-            elif s.shape.__class__ is Tube:
-                geom = 'tube'
-                sg.attrs['inner_radius'] = s.shape.inner_radius
-                sg.attrs['outer_radius'] = s.shape.outer_radius
-                for i, c in enumerate('xyz'):
-                    sg.attrs['axis_start_{}'.format(c)] = s.shape.start[i]
-                    sg.attrs['axis_end_{}'.format(c)] = s.shape.end[i]
-            sg.attrs['object_type'] = np.string_(geom.encode('utf8') + b"\x00")
+            s.export_h5(g.create_group(s.name))
 
         g = h5file.create_group('ExternalFields')
         if self.electric_fields.__class__.__name__ == "FieldZero":
@@ -472,8 +307,8 @@ class Simulation(SerializableH5):
 
     def create_history_file(self):
         n_particles = sum(s.initial_number_of_particles +
-                              s.particles_to_generate_each_step * self.time_grid.total_nodes
-                              for s in self.particle_sources)
+                          s.particles_to_generate_each_step * self.time_grid.total_nodes
+                          for s in self.particle_sources)
         n_time = (self.time_grid.total_nodes - 1) // self.time_grid.node_to_save + 1
         file_name_to_write = self._output_filename_prefix + 'history' + self._output_filename_suffix
         h5file = h5py.File(file_name_to_write, mode="w")
@@ -523,9 +358,9 @@ class Simulation(SerializableH5):
             h5file['/field/potential'].dims[0].attach_scale(h5file['/time'])
             for i, c in enumerate('xyz'):
                 h5file['/field/{}'.format(c)] = np.linspace(0, self.spat_mesh.size[i], self.spat_mesh.n_nodes[i])
-                h5file['/field/potential'].dims[i+1].label = c
+                h5file['/field/potential'].dims[i + 1].label = c
                 h5file['/field/potential'].dims.create_scale(h5file['/field/{}'.format(c)], c)
-                h5file['/field/potential'].dims[i+1].attach_scale(h5file['/field/{}'.format(c)])
+                h5file['/field/potential'].dims[i + 1].attach_scale(h5file['/field/{}'.format(c)])
 
         h5file.close()
 
