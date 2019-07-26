@@ -7,7 +7,7 @@ from ef.field import FieldZero, FieldSum, Field
 from ef.field.expression import FieldExpression
 from ef.field.on_grid import FieldOnGrid
 from ef.field.particles import FieldParticles
-from ef.field.solvers.field_solver import FieldSolver
+from ef.field.solvers.pyamg import FieldSolverPyamg
 from ef.field.uniform import FieldUniform
 from ef.inner_region import InnerRegion
 from ef.particle_array import ParticleArray
@@ -29,7 +29,7 @@ class Simulation(SerializableH5):
         self.time_grid = time_grid
         self.spat_mesh = spat_mesh
         self.inner_regions = inner_regions
-        self._field_solver = FieldSolver(spat_mesh, inner_regions)
+        self._field_solver = FieldSolverPyamg(spat_mesh, inner_regions)
         self.particle_sources = particle_sources
         self.electric_fields = FieldSum.factory(electric_fields, 'electric')
         self.magnetic_fields = FieldSum.factory(magnetic_fields, 'magnetic')
