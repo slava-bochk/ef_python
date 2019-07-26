@@ -29,11 +29,13 @@ class TestFieldSolver:
         solver = FieldSolver(mesh, [])
         solver.init_rhs_vector_in_full_domain()
         assert_array_equal(solver.rhs, np.zeros(3 * 2 * 2))
+        del solver
 
         mesh = SpatialMeshConf((4, 3, 3)).make(BoundaryConditionsConf(-2))
         solver = FieldSolver(mesh, [])
         solver.init_rhs_vector_in_full_domain()
         assert_array_equal(solver.rhs, [6, 4, 6, 6, 4, 6, 6, 4, 6, 6, 4, 6])  # what
+        del solver
 
         mesh = SpatialMeshConf((4, 4, 5)).make(BoundaryConditionsConf(-2))
         solver = FieldSolver(mesh, [])
@@ -42,6 +44,7 @@ class TestFieldSolver:
                                         4, 2, 4, 2, 0, 2, 4, 2, 4,
                                         4, 2, 4, 2, 0, 2, 4, 2, 4,
                                         6, 4, 6, 4, 2, 4, 6, 4, 6])  # what
+        del solver
 
         mesh = SpatialMeshConf((8, 12, 5), (2, 3, 1)).make(BoundaryConditionsConf(-1))
         solver = FieldSolver(mesh, [])
@@ -50,6 +53,7 @@ class TestFieldSolver:
                                         13, 4, 13, 9, 0, 9, 13, 4, 13,
                                         13, 4, 13, 9, 0, 9, 13, 4, 13,
                                         49, 40, 49, 45, 36, 45, 49, 40, 49])
+        del solver
 
         mesh = SpatialMeshConf((4, 6, 9), (1, 2, 3)).make(BoundaryConditionsConf())
         solver = FieldSolver(mesh, [])
@@ -60,6 +64,7 @@ class TestFieldSolver:
                                         [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]])
         solver.init_rhs_vector_in_full_domain()
         assert_allclose(solver.rhs, -np.array([1, 3, 5, -1, 0, -1, 2, 4, 6, 0, -1, 0]) * np.pi * 4 * 36)
+        del solver
 
         mesh = SpatialMeshConf((4, 6, 9), (1, 2, 3)).make(BoundaryConditionsConf())
         solver = FieldSolver(mesh, [])

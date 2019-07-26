@@ -13,5 +13,6 @@ venv/
 build/
 dist/
 .tox/
+.logamgx
 *.prof
 *.lprof

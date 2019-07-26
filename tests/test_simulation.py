@@ -10,7 +10,7 @@ from ef.config.components import *
 from ef.config.config import Config
 from ef.field import FieldZero
 from ef.field.expression import FieldExpression
-from ef.field.solvers.pyamg import FieldSolverPyamg
+from ef.field.solvers.pyamgx import FieldSolverPyamgx as FieldSolver
 from ef.field.uniform import FieldUniform
 from ef.inner_region import InnerRegion
 from ef.particle_array import ParticleArray
@@ -29,7 +29,7 @@ class TestSimulation:
         assert sim.time_grid == TimeGrid(100, 1, 10)
         assert sim.spat_mesh == SpatialMesh.do_init((10, 10, 10), (1, 1, 1), BoundaryConditionsConf(0))
         assert sim.inner_regions == []
-        assert type(sim._field_solver) == FieldSolverPyamg
+        assert type(sim._field_solver) == FieldSolver
         assert sim.particle_sources == []
         assert sim.electric_fields == FieldZero('ZeroSum', 'electric')
         assert sim.magnetic_fields == FieldZero('ZeroSum', 'magnetic')
@@ -60,7 +60,7 @@ class TestSimulation:
                                      InnerRegion('2', Sphere(), -2),
                                      InnerRegion('3', Cylinder(), 0),
                                      InnerRegion('4', Tube(), 4)]
-        assert type(sim._field_solver) == FieldSolverPyamg
+        assert type(sim._field_solver) == FieldSolver
         assert sim.particle_sources == [ParticleSourceConf('a', Box()).make(),
                                         ParticleSourceConf('c', Cylinder()).make(),
                                         ParticleSourceConf('d', Tube()).make()]
@@ -144,6 +144,7 @@ class TestSimulation:
         assert not tmpdir.join('out_0000001_new.h5').exists()
         assert tmpdir.join('out_0000002.h5').exists()
         assert not tmpdir.join('out_0000002_new.h5').exists()
+        del sim._field_solver
         with h5py.File('out_0000002.h5', 'r') as h5file:
             sim2 = Simulation.init_from_h5(h5file, 'out_', '.h5', 'python')
             for i, ir in enumerate(sim2.inner_regions):

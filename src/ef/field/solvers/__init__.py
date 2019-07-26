@@ -13,7 +13,7 @@ class FieldSolver:
         self.inner_regions = inner_regions
         nrows = (spat_mesh.n_nodes - 2).prod()
         self.A = self.construct_equation_matrix()
-        self.phi_vec = np.empty(nrows, dtype='f')
+        self.phi_vec = np.empty(nrows)
         self.rhs = np.empty_like(self.phi_vec)
         self.create_solver_and_preconditioner()
 

@@ -33,6 +33,7 @@ def main():
         with h5py.File(parser_or_h5_filename, 'r') as h5file:
             sim = Simulation.init_from_h5(h5file, prefix, suffix, args.output_format)
         sim.continue_pic_simulation()
+    del sim
     return 0
 
 
