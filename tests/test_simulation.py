@@ -51,7 +51,8 @@ class TestSimulation:
 
         parser = ConfigParser()
         parser.read_string(efconf.export_to_string())
-        sim = Config.from_configparser(parser).make()
+        conf = Config.from_configparser(parser)
+        sim = conf.make()
         assert sim.time_grid == TimeGrid(200, 2, 20)
         assert sim.spat_mesh == SpatialMesh.do_init((5, 5, 5), (.1, .1, .1), BoundaryConditionsConf(-2.7))
         assert sim.inner_regions == [InnerRegion('1', Box(), 1),

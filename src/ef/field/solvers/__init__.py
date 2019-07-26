@@ -10,7 +10,7 @@ class FieldSolver:
             print("WARNING: proceed with caution")
         self._double_index = self.double_index(spat_mesh.n_nodes)
         self.spat_mesh = spat_mesh
-        self.inner_regions = inner_regions
+        self.nodes_in_regions, self.potential_in_regions = self.generate_nodes_in_regions(inner_regions)
         nrows = (spat_mesh.n_nodes - 2).prod()
         self.A = self.construct_equation_matrix()
         self.phi_vec = np.empty(nrows)
@@ -50,21 +50,30 @@ class FieldSolver:
         return scipy.sparse.diags([1.0, -2.0, 1.0], [-diag_offset, 0, diag_offset], shape=(block_size, block_size),
                                   format='csr')
 
-    def zero_nondiag_for_nodes_inside_objects(self, matrix):
-        for ir in self.inner_regions:
-            ijk = self._double_index[:, 1:]
-            n = self._double_index[:, 0]
-            xyz = self.spat_mesh.cell * ijk
+    def generate_nodes_in_regions(self, inner_regions):
+        ijk = self._double_index[:, 1:]
+        n = self._double_index[:, 0]
+        xyz = self.spat_mesh.cell * ijk
+        inside = np.zeros_like(n, np.bool)
+        potential = np.empty_like(n, np.float)
+        for ir in inner_regions:
             mask = ir.check_if_points_inside(xyz)
-            n = n[mask]
-            for i in n:
-                csr_row_start = matrix.indptr[i]
-                csr_row_end = matrix.indptr[i + 1]
-                for t in range(csr_row_start, csr_row_end):
-                    if matrix.indices[t] != i:
-                        matrix.data[t] = 0
-                    else:
-                        matrix.data[t] = 1
+            if np.logical_and.reduce([mask, inside, potential != ir.potential]).any():
+                raise ValueError("Found intersecting inner regions with different potentials.")
+            potential[mask] = ir.potential
+            inside = np.logical_or(inside, mask)
+        indices = n[inside]
+        return indices, potential[indices]
+
+    def zero_nondiag_for_nodes_inside_objects(self, matrix):
+        for i in self.nodes_in_regions:
+            csr_row_start = matrix.indptr[i]
+            csr_row_end = matrix.indptr[i + 1]
+            for t in range(csr_row_start, csr_row_end):
+                if matrix.indices[t] != i:
+                    matrix.data[t] = 0
+                else:
+                    matrix.data[t] = 1
         return matrix
 
     def create_solver_and_preconditioner(self):
@@ -93,12 +102,7 @@ class FieldSolver:
         self.rhs = rhs.ravel('F')
 
     def set_rhs_for_nodes_inside_objects(self):
-        for ir in self.inner_regions:
-            ijk = self._double_index[:, 1:]
-            n = self._double_index[:, 0]
-            xyz = self.spat_mesh.cell * ijk
-            mask = ir.check_if_points_inside(xyz)
-            self.rhs[n[mask]] = ir.potential
+        self.rhs[self.nodes_in_regions] = self.potential_in_regions
 
     def transfer_solution_to_spat_mesh(self):
         self.spat_mesh.potential[1:-1, 1:-1, 1:-1] = self.phi_vec.reshape(self.spat_mesh.n_nodes - 2, order='F')

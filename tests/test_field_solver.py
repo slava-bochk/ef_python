@@ -24,6 +24,14 @@ class TestFieldSolver:
                                                                            (4, 1, 3, 1),
                                                                            (5, 2, 3, 1)])
 
+    def test_generate_nodes_in_regions(self):
+        mesh = SpatialMeshConf((4, 6, 9), (1, 2, 3)).make(BoundaryConditionsConf())
+        solver = FieldSolver(mesh, [])
+        inner_regions = [InnerRegion('test', Box((1, 2, 3), (1, 2, 3)), 3)]
+        nodes, potential = solver.generate_nodes_in_regions(inner_regions)
+        assert_array_equal(nodes, [0, 1, 3, 4, 6, 7, 9, 10])
+        assert_array_equal(potential, [3, 3, 3, 3, 3, 3, 3, 3])
+
     def test_init_rhs(self):
         mesh = SpatialMeshConf((4, 3, 3)).make(BoundaryConditionsConf())
         solver = FieldSolver(mesh, [])
@@ -68,14 +76,14 @@ class TestFieldSolver:
 
         mesh = SpatialMeshConf((4, 6, 9), (1, 2, 3)).make(BoundaryConditionsConf())
         solver = FieldSolver(mesh, [])
-        solver.inner_regions = [InnerRegion('test', Box((1, 2, 3), (1, 2, 3)), 3)]
+        nodep = solver.generate_nodes_in_regions([InnerRegion('test', Box((1, 2, 3), (1, 2, 3)), 3)])
+        solver.nodes_in_regions, solver.potential_in_regions = nodep
         solver.init_rhs_vector()
         assert_array_equal(solver.rhs, [3, 3, 0, 3, 3, 0, 3, 3, 0, 3, 3, 0])
 
     def test_zero_nondiag_inside_objects(self):
         mesh = SpatialMeshConf((4, 6, 9), (1, 2, 3)).make(BoundaryConditionsConf())
-        solver = FieldSolver(mesh, [])
-        solver.inner_regions = [InnerRegion('test', Box((1, 2, 3), (1, 2, 3)), 3)]
+        solver = FieldSolver(mesh, [InnerRegion('test', Box((1, 2, 3), (1, 2, 3)), 3)])
 
         a = csr_matrix(np.full((12, 12), 2))
         assert_array_equal(a.toarray(), [[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
