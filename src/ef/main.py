@@ -29,14 +29,14 @@ def main():
     solver_class = {'amg': pyamg.FieldSolverPyamg, 'amgx': pyamgx.FieldSolverPyamgx}[args.solver]
     if is_config:
         sim = read_conf(parser_or_h5_filename, args.prefix, args.suffix, args.output_format).make()
-        sim.start_pic_simulation(solver_class)
+        sim.start(solver_class)
     else:
         print("Continuing from h5 file:", parser_or_h5_filename)
         prefix, suffix = merge_h5_prefix_suffix(parser_or_h5_filename, args.prefix, args.suffix)
         print("Using output prefix and suffix:", prefix, suffix)
         with h5py.File(parser_or_h5_filename, 'r') as h5file:
             sim = Simulation.init_from_h5(h5file, prefix, suffix, args.output_format)
-        sim.continue_pic_simulation(solver_class)
+        sim.continue_(solver_class)
     del sim
     return 0
 

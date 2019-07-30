@@ -58,18 +58,18 @@ class Simulation(SerializableH5):
             simulation._output_writer = OutputFileConf(filename_prefix, filename_suffix, output_format).make()
         return simulation
 
-    def start_pic_simulation(self, solver_class=FieldSolverPyamg):
+    def start(self, solver_class=FieldSolverPyamg):
         self._field_solver = solver_class(self.spat_mesh, self.inner_regions)
         self.eval_and_write_fields_without_particles()
         self.generate_and_prepare_particles(initial=True)
         self.write()
-        self.run_pic()
+        self.run()
 
-    def continue_pic_simulation(self, solver_class=FieldSolverPyamg):
+    def continue_(self, solver_class=FieldSolverPyamg):
         self._field_solver = solver_class(self.spat_mesh, self.inner_regions)
-        self.run_pic()
+        self.run()
 
-    def run_pic(self):
+    def run(self):
         total_time_iterations = self.time_grid.total_nodes - 1
         current_node = self.time_grid.current_node
         for i in range(current_node, total_time_iterations):

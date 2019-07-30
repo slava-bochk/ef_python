@@ -93,7 +93,7 @@ class TestSimulation:
         Config(TimeGridConf(1.0, save_step=.5, step=.1), SpatialMeshConf((10, 10, 10), (1, 1, 1)),
                [ParticleSourceConf('gas', Box(size=(10, 10, 10)), 50, 0, np.zeros(3), 300)],
                particle_interaction_model=ParticleInteractionModelConf(model)
-               ).make().start_pic_simulation()
+               ).make().start()
 
     @pytest.mark.parametrize('model', ['noninteracting', 'PIC', 'binary'])
     def test_cube_of_gas_with_hole(self, model, monkeypatch, tmpdir):
@@ -102,7 +102,7 @@ class TestSimulation:
                [ParticleSourceConf('gas', Box(size=(10, 10, 10)), 50, 0, np.zeros(3), 300)],
                [InnerRegionConf('hole', Box(origin=(4, 4, 4), size=(2, 2, 2)))],
                particle_interaction_model=ParticleInteractionModelConf(model)
-               ).make().start_pic_simulation()
+               ).make().start()
 
     def test_id_generation(self, monkeypatch, tmpdir):
         monkeypatch.chdir(tmpdir)
@@ -115,7 +115,7 @@ class TestSimulation:
         sim = conf.make()
         assert len(sim.particle_sources) == 2
         assert len(sim.particle_arrays) == 0
-        sim.start_pic_simulation()
+        sim.start()
         assert len(sim.particle_sources) == 2
         assert len(sim.particle_arrays) == 1
         assert_array_equal(sim.particle_arrays[0].ids, range(100))
@@ -147,5 +147,5 @@ class TestSimulation:
                       particle_interaction_model=ParticleInteractionModelConf('noninteracting'),
                       external_fields=[])
         sim = conf.make()
-        sim.start_pic_simulation()
+        sim.start()
         assert [len(a.ids) for a in sim.particle_arrays] == [4]
