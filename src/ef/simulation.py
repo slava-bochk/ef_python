@@ -2,22 +2,15 @@ from collections import defaultdict
 
 import numpy as np
 
-from ef.config.components import OutputFileConf
-from ef.field import FieldZero, FieldSum, Field
+from ef.field import FieldZero, FieldSum
 from ef.field.particles import FieldParticles
 from ef.field.solvers.pyamg import FieldSolverPyamg
-from ef.inner_region import InnerRegion
 from ef.output import OutputWriterNone
 from ef.particle_array import ParticleArray
-from ef.particle_interaction_model import ParticleInteractionModel
-from ef.particle_source import ParticleSource
-from ef.spatial_mesh import SpatialMesh
-from ef.time_grid import TimeGrid
 from ef.util.serializable_h5 import SerializableH5
 
 
 class Simulation(SerializableH5):
-
     def __init__(self, time_grid, spat_mesh, inner_regions,
                  particle_sources,
                  electric_fields, magnetic_fields, particle_interaction_model,
@@ -47,16 +40,6 @@ class Simulation(SerializableH5):
 
         self._output_writer = output_writer
         self.max_id = max_id
-
-    @classmethod
-    def init_from_h5(cls, h5file, filename_prefix, filename_suffix, output_format):
-        if 'SpatialMesh' in h5file:
-            simulation = cls.import_from_h5(h5file,
-                                            OutputFileConf(filename_prefix, filename_suffix, output_format).make())
-        else:
-            simulation = cls.load_h5(h5file)
-            simulation._output_writer = OutputFileConf(filename_prefix, filename_suffix, output_format).make()
-        return simulation
 
     def start(self, solver_class=FieldSolverPyamg):
         self._field_solver = solver_class(self.spat_mesh, self.inner_regions)
@@ -181,24 +164,6 @@ class Simulation(SerializableH5):
         if (current_step % step_to_save) == 0:
             print()
             self.write()
-
-    @staticmethod
-    def import_from_h5(h5file, output_writer):
-        fields = [Field.import_h5(g) for g in h5file['ExternalFields'].values()]
-        sources = [ParticleSource.import_h5(g) for g in h5file['ParticleSources'].values()]
-        particles = [ParticleArray.import_h5(g) for g in h5file['ParticleSources'].values()]
-        max_id = int(np.max([p.ids for p in particles], initial=-1))
-        return Simulation(
-            time_grid=TimeGrid.import_h5(h5file['TimeGrid']),
-            spat_mesh=SpatialMesh.import_h5(h5file['SpatialMesh']),
-            inner_regions=[InnerRegion.import_h5(g) for g in h5file['InnerRegions'].values()],
-            electric_fields=[f for f in fields if f.electric_or_magnetic == 'electric'],
-            magnetic_fields=[f for f in fields if f.electric_or_magnetic == 'magnetic'],
-            particle_interaction_model=ParticleInteractionModel.import_h5(h5file['ParticleInteractionModel']),
-            particle_sources=sources, particle_arrays=particles,
-            output_writer=output_writer,
-            max_id=max_id
-        )
 
     def write(self):
         print("Writing step {} to file".format(self.time_grid.current_node))

@@ -13,6 +13,7 @@ from ef.field.expression import FieldExpression
 from ef.field.uniform import FieldUniform
 from ef.inner_region import InnerRegion
 from ef.output.cpp import OutputWriterCpp
+from ef.output.reader import Reader
 from ef.particle_array import ParticleArray
 from ef.particle_interaction_model import ParticleInteractionModel
 from ef.simulation import Simulation
@@ -132,9 +133,7 @@ class TestSimulation:
         assert not tmpdir.join('out_0000001.h5').exists()
         assert tmpdir.join('out_0000002.h5').exists()
         with h5py.File('out_0000002.h5', 'r') as h5file:
-            sim2 = Simulation.init_from_h5(h5file, 'out_', '.h5', 'python')
-            for i, ir in enumerate(sim2.inner_regions):
-                ir.assert_eq(sim.inner_regions[i])
+            sim2 = Reader.read_simulation(h5file)
             sim2.assert_eq(sim)
 
     def test_particle_generation(self, monkeypatch, tmpdir):

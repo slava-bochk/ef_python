@@ -8,9 +8,10 @@ from configparser import ConfigParser
 
 import h5py
 
+from ef.config.components import OutputFileConf
 from ef.config.config import Config
-from ef.simulation import Simulation
 from ef.field.solvers import pyamg, pyamgx
+from ef.output.reader import Reader
 
 
 def main():
@@ -35,7 +36,8 @@ def main():
         prefix, suffix = merge_h5_prefix_suffix(parser_or_h5_filename, args.prefix, args.suffix)
         print("Using output prefix and suffix:", prefix, suffix)
         with h5py.File(parser_or_h5_filename, 'r') as h5file:
-            sim = Simulation.init_from_h5(h5file, prefix, suffix, args.output_format)
+            sim = Reader.read_simulation(h5file)
+            sim._output_writer = OutputFileConf(prefix, suffix, args.output_format).make()
         sim.continue_(solver_class)
     del sim
     return 0
