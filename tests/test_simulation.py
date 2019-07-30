@@ -13,7 +13,7 @@ from ef.field.uniform import FieldUniform
 from ef.inner_region import InnerRegion
 from ef.particle_array import ParticleArray
 from ef.particle_interaction_model import ParticleInteractionModel
-from ef.simulation import Runner
+from ef.runner import Runner
 from ef.spatial_mesh import SpatialMesh
 from ef.time_grid import TimeGrid
 

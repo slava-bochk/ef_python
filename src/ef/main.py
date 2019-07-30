@@ -12,7 +12,7 @@ from ef.config.components import OutputFileConf
 from ef.config.config import Config
 from ef.field.solvers import pyamg, pyamgx
 from ef.output.reader import Reader
-from ef.simulation import Runner
+from ef.runner import Runner
 
 
 def main():
