@@ -12,6 +12,7 @@ from ef.config.components import OutputFileConf
 from ef.config.config import Config
 from ef.field.solvers import pyamg, pyamgx
 from ef.output.reader import Reader
+from ef.simulation import Runner
 
 
 def main():
@@ -29,16 +30,18 @@ def main():
     is_config, parser_or_h5_filename = args.config_or_h5_file
     solver_class = {'amg': pyamg.FieldSolverPyamg, 'amgx': pyamgx.FieldSolverPyamgx}[args.solver]
     if is_config:
-        sim = read_conf(parser_or_h5_filename, args.prefix, args.suffix, args.output_format).make()
-        sim.start(solver_class)
+        conf = read_conf(parser_or_h5_filename, args.prefix, args.suffix, args.output_format)
+        sim = conf.make()
+        writer = conf.make_writer()
+        Runner(sim, writer).start(solver_class)
     else:
         print("Continuing from h5 file:", parser_or_h5_filename)
         prefix, suffix = merge_h5_prefix_suffix(parser_or_h5_filename, args.prefix, args.suffix)
         print("Using output prefix and suffix:", prefix, suffix)
         with h5py.File(parser_or_h5_filename, 'r') as h5file:
             sim = Reader.read_simulation(h5file)
-            sim._output_writer = OutputFileConf(prefix, suffix, args.output_format).make()
-        sim.continue_(solver_class)
+        writer = OutputFileConf(prefix, suffix, args.output_format).make()
+        Runner(sim, writer).continue_(solver_class)
     del sim
     return 0
 

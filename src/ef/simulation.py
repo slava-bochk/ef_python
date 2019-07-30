@@ -10,11 +10,53 @@ from ef.particle_array import ParticleArray
 from ef.util.serializable_h5 import SerializableH5
 
 
+class Runner:
+    def __init__(self, simulation, output_writer=OutputWriterNone()):
+        self.output_writer = output_writer
+        self.simulation = simulation
+
+    def start(self, solver_class=FieldSolverPyamg):
+        self.simulation._field_solver = solver_class(self.simulation.spat_mesh, self.simulation.inner_regions)
+        self.eval_and_write_fields_without_particles()
+        self.simulation.generate_and_prepare_particles(initial=True)
+        self.write()
+        self.run()
+
+    def continue_(self, solver_class=FieldSolverPyamg):
+        self.simulation._field_solver = solver_class(self.simulation.spat_mesh, self.simulation.inner_regions)
+        self.run()
+
+    def run(self):
+        total_time_iterations = self.simulation.time_grid.total_nodes - 1
+        current_node = self.simulation.time_grid.current_node
+        for i in range(current_node, total_time_iterations):
+            print("\rTime step from {:d} to {:d} of {:d}".format(
+                i, i + 1, total_time_iterations), end='')
+            self.simulation.advance_one_time_step()
+            self.write_step_to_save()
+
+    def write_step_to_save(self):
+        current_step = self.simulation.time_grid.current_node
+        step_to_save = self.simulation.time_grid.node_to_save
+        if (current_step % step_to_save) == 0:
+            print()
+            self.write()
+
+    def write(self):
+        print("Writing step {} to file".format(self.simulation.time_grid.current_node))
+        self.output_writer.write(self.simulation)
+
+    def eval_and_write_fields_without_particles(self):
+        self.simulation.spat_mesh.clear_old_density_values()
+        self.simulation.eval_potential_and_fields()
+        print("Writing initial fields to file")
+        self.output_writer.write(self.simulation, "fieldsWithoutParticles")
+
+
 class Simulation(SerializableH5):
     def __init__(self, time_grid, spat_mesh, inner_regions,
                  particle_sources,
                  electric_fields, magnetic_fields, particle_interaction_model,
-                 output_writer=OutputWriterNone(),
                  max_id=-1, particle_arrays=()):
         self.time_grid = time_grid
         self.spat_mesh = spat_mesh
@@ -25,6 +67,7 @@ class Simulation(SerializableH5):
         self.particle_interaction_model = particle_interaction_model
         self.particle_arrays = list(particle_arrays)
         self.consolidate_particle_arrays()
+        self._field_solver = None
 
         if self.particle_interaction_model.binary:
             self._dynamic_field = FieldParticles('binary_particle_field', self.particle_arrays)
@@ -38,28 +81,7 @@ class Simulation(SerializableH5):
         else:
             self._dynamic_field = self.spat_mesh
 
-        self._output_writer = output_writer
         self.max_id = max_id
-
-    def start(self, solver_class=FieldSolverPyamg):
-        self._field_solver = solver_class(self.spat_mesh, self.inner_regions)
-        self.eval_and_write_fields_without_particles()
-        self.generate_and_prepare_particles(initial=True)
-        self.write()
-        self.run()
-
-    def continue_(self, solver_class=FieldSolverPyamg):
-        self._field_solver = solver_class(self.spat_mesh, self.inner_regions)
-        self.run()
-
-    def run(self):
-        total_time_iterations = self.time_grid.total_nodes - 1
-        current_node = self.time_grid.current_node
-        for i in range(current_node, total_time_iterations):
-            print("\rTime step from {:d} to {:d} of {:d}".format(
-                i, i + 1, total_time_iterations), end='')
-            self.advance_one_time_step()
-            self.write_step_to_save()
 
     def advance_one_time_step(self):
         self.push_particles()
@@ -157,23 +179,6 @@ class Simulation(SerializableH5):
 
     def update_time_grid(self):
         self.time_grid.update_to_next_step()
-
-    def write_step_to_save(self):
-        current_step = self.time_grid.current_node
-        step_to_save = self.time_grid.node_to_save
-        if (current_step % step_to_save) == 0:
-            print()
-            self.write()
-
-    def write(self):
-        print("Writing step {} to file".format(self.time_grid.current_node))
-        self._output_writer.write(self)
-
-    def eval_and_write_fields_without_particles(self):
-        self.spat_mesh.clear_old_density_values()
-        self.eval_potential_and_fields()
-        print("Writing initial fields to file")
-        self._output_writer.write(self, "fieldsWithoutParticles")
 
     def consolidate_particle_arrays(self):
         particles_by_type = defaultdict(list)

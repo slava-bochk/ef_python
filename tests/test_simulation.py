@@ -1,7 +1,6 @@
 from configparser import ConfigParser
 from math import sqrt
 
-import h5py
 import numpy as np
 import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal
@@ -12,11 +11,9 @@ from ef.field import FieldZero
 from ef.field.expression import FieldExpression
 from ef.field.uniform import FieldUniform
 from ef.inner_region import InnerRegion
-from ef.output.cpp import OutputWriterCpp
-from ef.output.reader import Reader
 from ef.particle_array import ParticleArray
 from ef.particle_interaction_model import ParticleInteractionModel
-from ef.simulation import Simulation
+from ef.simulation import Runner
 from ef.spatial_mesh import SpatialMesh
 from ef.time_grid import TimeGrid
 
@@ -48,9 +45,6 @@ class TestSimulation:
         assert sim.electric_fields == FieldZero('ZeroSum', 'electric')
         assert sim.magnetic_fields == FieldZero('ZeroSum', 'magnetic')
         assert sim.particle_interaction_model == ParticleInteractionModel("PIC")
-        assert type(sim._output_writer) == OutputWriterCpp
-        assert sim._output_writer.prefix == "out_"
-        assert sim._output_writer.suffix == ".h5"
 
     def test_all_config(self):
         efconf = self.sim_full_config
@@ -70,9 +64,6 @@ class TestSimulation:
         assert sim.electric_fields == FieldUniform('x', 'electric', np.array((-2, -2, 1)))
         assert sim.magnetic_fields == FieldExpression('y', 'magnetic', '0', '0', '3*x + sqrt(y) - z**2')
         assert sim.particle_interaction_model == ParticleInteractionModel("binary")
-        assert type(sim._output_writer) == OutputWriterCpp
-        assert sim._output_writer.prefix == "out_"
-        assert sim._output_writer.suffix == ".h5"
 
     def test_binary_field(self):
         d = Config().make()
@@ -89,24 +80,23 @@ class TestSimulation:
             [(0, 0, 0), (0, 0, -4), (4, 0, 0), (4 / sqrt(27), 4 / sqrt(27), 4 / sqrt(27))])
 
     @pytest.mark.parametrize('model', ['noninteracting', 'PIC', 'binary'])
-    def test_cube_of_gas(self, model, monkeypatch, tmpdir):
-        monkeypatch.chdir(tmpdir)
-        Config(TimeGridConf(1.0, save_step=.5, step=.1), SpatialMeshConf((10, 10, 10), (1, 1, 1)),
-               [ParticleSourceConf('gas', Box(size=(10, 10, 10)), 50, 0, np.zeros(3), 300)],
-               particle_interaction_model=ParticleInteractionModelConf(model)
-               ).make().start()
+    def test_cube_of_gas(self, model):
+        sim = Config(TimeGridConf(1.0, save_step=.5, step=.1), SpatialMeshConf((10, 10, 10), (1, 1, 1)),
+                     [ParticleSourceConf('gas', Box(size=(10, 10, 10)), 50, 0, np.zeros(3), 300)],
+                     particle_interaction_model=ParticleInteractionModelConf(model)
+                     ).make()
+        Runner(sim).start()
 
     @pytest.mark.parametrize('model', ['noninteracting', 'PIC', 'binary'])
-    def test_cube_of_gas_with_hole(self, model, monkeypatch, tmpdir):
-        monkeypatch.chdir(tmpdir)
-        Config(TimeGridConf(1.0, save_step=.5, step=.1), SpatialMeshConf((10, 10, 10), (1, 1, 1)),
-               [ParticleSourceConf('gas', Box(size=(10, 10, 10)), 50, 0, np.zeros(3), 300)],
-               [InnerRegionConf('hole', Box(origin=(4, 4, 4), size=(2, 2, 2)))],
-               particle_interaction_model=ParticleInteractionModelConf(model)
-               ).make().start()
+    def test_cube_of_gas_with_hole(self, model):
+        sim = Config(TimeGridConf(1.0, save_step=.5, step=.1), SpatialMeshConf((10, 10, 10), (1, 1, 1)),
+                     [ParticleSourceConf('gas', Box(size=(10, 10, 10)), 50, 0, np.zeros(3), 300)],
+                     [InnerRegionConf('hole', Box(origin=(4, 4, 4), size=(2, 2, 2)))],
+                     particle_interaction_model=ParticleInteractionModelConf(model)
+                     ).make()
+        Runner(sim).start()
 
-    def test_id_generation(self, monkeypatch, tmpdir):
-        monkeypatch.chdir(tmpdir)
+    def test_id_generation(self):
         conf = Config(TimeGridConf(0.001, save_step=.0005, step=0.0001), SpatialMeshConf((10, 10, 10), (1, 1, 1)),
                       sources=[ParticleSourceConf('gas', Box((4, 4, 4), size=(1, 1, 1)), 50, 0, np.zeros(3), 0.00),
                                ParticleSourceConf('gas2', Box((5, 5, 5), size=(1, 1, 1)), 50, 0, np.zeros(3), 0.00)],
@@ -116,25 +106,10 @@ class TestSimulation:
         sim = conf.make()
         assert len(sim.particle_sources) == 2
         assert len(sim.particle_arrays) == 0
-        sim.start()
+        Runner(sim).start()
         assert len(sim.particle_sources) == 2
         assert len(sim.particle_arrays) == 1
         assert_array_equal(sim.particle_arrays[0].ids, range(100))
-
-    def test_write(self, monkeypatch, tmpdir):
-        monkeypatch.chdir(tmpdir)
-        conf = self.sim_full_config
-        sim = conf.make()
-        sim.write()
-        assert tmpdir.join('out_0000000.h5').exists()
-        sim.time_grid.update_to_next_step()
-        sim.time_grid.update_to_next_step()
-        sim.write()
-        assert not tmpdir.join('out_0000001.h5').exists()
-        assert tmpdir.join('out_0000002.h5').exists()
-        with h5py.File('out_0000002.h5', 'r') as h5file:
-            sim2 = Reader.read_simulation(h5file)
-            sim2.assert_eq(sim)
 
     def test_particle_generation(self, monkeypatch, tmpdir):
         monkeypatch.chdir(tmpdir)
@@ -146,5 +121,5 @@ class TestSimulation:
                       particle_interaction_model=ParticleInteractionModelConf('noninteracting'),
                       external_fields=[])
         sim = conf.make()
-        sim.start()
+        Runner(sim).start()
         assert [len(a.ids) for a in sim.particle_arrays] == [4]
