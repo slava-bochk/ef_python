@@ -12,6 +12,7 @@ from ef.field import FieldZero
 from ef.field.expression import FieldExpression
 from ef.field.uniform import FieldUniform
 from ef.inner_region import InnerRegion
+from ef.output.cpp import OutputWriterCpp
 from ef.particle_array import ParticleArray
 from ef.particle_interaction_model import ParticleInteractionModel
 from ef.simulation import Simulation
@@ -20,6 +21,20 @@ from ef.time_grid import TimeGrid
 
 
 class TestSimulation:
+    sim_full_config = Config(TimeGridConf(200, 20, 2), SpatialMeshConf((5, 5, 5), (.1, .1, .1)),
+                             sources=[ParticleSourceConf('a', Box()),
+                                      ParticleSourceConf('c', Cylinder()),
+                                      ParticleSourceConf('d', Tube(start=(0, 0, 0), end=(0, 0, 1)))],
+                             inner_regions=[InnerRegionConf('1', Box(), 1),
+                                            InnerRegionConf('2', Sphere(), -2),
+                                            InnerRegionConf('3', Cylinder(), 0),
+                                            InnerRegionConf('4', Tube(), 4)],
+                             output_file=OutputFileConf(), boundary_conditions=BoundaryConditionsConf(-2.7),
+                             particle_interaction_model=ParticleInteractionModelConf('binary'),
+                             external_fields=[ExternalElectricFieldUniformConf('x', (-2, -2, 1)),
+                                              ExternalMagneticFieldExpressionConf('y',
+                                                                                  ('0', '0', '3*x + sqrt(y) - z**2'))])
+
     def test_init_from_config(self):
         efconf = Config()
         parser = ConfigParser()
@@ -32,23 +47,12 @@ class TestSimulation:
         assert sim.electric_fields == FieldZero('ZeroSum', 'electric')
         assert sim.magnetic_fields == FieldZero('ZeroSum', 'magnetic')
         assert sim.particle_interaction_model == ParticleInteractionModel("PIC")
-        assert sim._output_filename_prefix == "out_"
-        assert sim._output_filename_suffix == ".h5"
+        assert type(sim._output_writer) == OutputWriterCpp
+        assert sim._output_writer.prefix == "out_"
+        assert sim._output_writer.suffix == ".h5"
 
     def test_all_config(self):
-        efconf = Config(TimeGridConf(200, 20, 2), SpatialMeshConf((5, 5, 5), (.1, .1, .1)),
-                        sources=[ParticleSourceConf('a', Box()),
-                                 ParticleSourceConf('c', Cylinder()),
-                                 ParticleSourceConf('d', Tube())],
-                        inner_regions=[InnerRegionConf('1', Box(), 1),
-                                       InnerRegionConf('2', Sphere(), -2),
-                                       InnerRegionConf('3', Cylinder(), 0),
-                                       InnerRegionConf('4', Tube(), 4)],
-                        output_file=OutputFileConf(), boundary_conditions=BoundaryConditionsConf(-2.7),
-                        particle_interaction_model=ParticleInteractionModelConf('binary'),
-                        external_fields=[ExternalElectricFieldUniformConf('x', (-2, -2, 1)),
-                                         ExternalMagneticFieldExpressionConf('y', ('0', '0', '3*x + sqrt(y) - z**2'))])
-
+        efconf = self.sim_full_config
         parser = ConfigParser()
         parser.read_string(efconf.export_to_string())
         conf = Config.from_configparser(parser)
@@ -61,12 +65,13 @@ class TestSimulation:
                                      InnerRegion('4', Tube(), 4)]
         assert sim.particle_sources == [ParticleSourceConf('a', Box()).make(),
                                         ParticleSourceConf('c', Cylinder()).make(),
-                                        ParticleSourceConf('d', Tube()).make()]
+                                        ParticleSourceConf('d', Tube(start=(0, 0, 0), end=(0, 0, 1))).make()]
         assert sim.electric_fields == FieldUniform('x', 'electric', np.array((-2, -2, 1)))
         assert sim.magnetic_fields == FieldExpression('y', 'magnetic', '0', '0', '3*x + sqrt(y) - z**2')
         assert sim.particle_interaction_model == ParticleInteractionModel("binary")
-        assert sim._output_filename_prefix == "out_"
-        assert sim._output_filename_suffix == ".h5"
+        assert type(sim._output_writer) == OutputWriterCpp
+        assert sim._output_writer.prefix == "out_"
+        assert sim._output_writer.suffix == ".h5"
 
     def test_binary_field(self):
         d = Config().make()
@@ -117,31 +122,15 @@ class TestSimulation:
 
     def test_write(self, monkeypatch, tmpdir):
         monkeypatch.chdir(tmpdir)
-        conf = Config(TimeGridConf(1, 1, .01), SpatialMeshConf((5, 5, 5), (.1, .1, .1)),
-                      sources=[ParticleSourceConf('a', Box()),
-                               ParticleSourceConf('c', Cylinder()),
-                               ParticleSourceConf('d', Tube((0, 0, 0), (0, 0, 1)))],
-                      inner_regions=[InnerRegionConf('1', Box(), 1),
-                                     InnerRegionConf('2', Sphere(), -2),
-                                     InnerRegionConf('3', Cylinder(), 0),
-                                     InnerRegionConf('4', Tube((0, 0, 0), (0, 0, 1)), 4)],
-                      output_file=OutputFileConf(), boundary_conditions=BoundaryConditionsConf(-2.7),
-                      particle_interaction_model=ParticleInteractionModelConf('binary'),
-                      external_fields=[ExternalElectricFieldUniformConf('x', (-2, -2, 1)),
-                                       ExternalMagneticFieldExpressionConf('y', ('0', '0', '3*x + sqrt(y) - z**2'))])
+        conf = self.sim_full_config
         sim = conf.make()
-        sim.create_history_file()
-        assert tmpdir.join('out_history.h5').exists()
         sim.write()
         assert tmpdir.join('out_0000000.h5').exists()
-        assert not tmpdir.join('out_0000000_new.h5').exists()
         sim.time_grid.update_to_next_step()
         sim.time_grid.update_to_next_step()
         sim.write()
         assert not tmpdir.join('out_0000001.h5').exists()
-        assert not tmpdir.join('out_0000001_new.h5').exists()
         assert tmpdir.join('out_0000002.h5').exists()
-        assert not tmpdir.join('out_0000002_new.h5').exists()
         with h5py.File('out_0000002.h5', 'r') as h5file:
             sim2 = Simulation.init_from_h5(h5file, 'out_', '.h5', 'python')
             for i, ir in enumerate(sim2.inner_regions):
