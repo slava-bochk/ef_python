@@ -29,7 +29,6 @@ class Simulation(SerializableH5):
         self.particle_interaction_model = particle_interaction_model
         self.particle_arrays = list(particle_arrays)
         self.consolidate_particle_arrays()
-        self._field_solver = None
 
         if self.particle_interaction_model == Model.binary:
             self._dynamic_field = FieldParticles('binary_particle_field', self.particle_arrays)
@@ -45,27 +44,26 @@ class Simulation(SerializableH5):
 
         self.max_id = max_id
 
-    def advance_one_time_step(self):
+    def advance_one_time_step(self, field_solver):
         self.push_particles()
-        self.generate_and_prepare_particles()
+        self.generate_and_prepare_particles(field_solver)
         self.update_time_grid()
 
     def eval_charge_density(self):
         self.spat_mesh.clear_old_density_values()
         self.spat_mesh.weight_particles_charge_to_mesh(self.particle_arrays)
 
-    def eval_potential_and_fields(self):
-        self._field_solver.eval_potential()
-        self.spat_mesh.eval_field_from_potential()
+    def eval_potential_and_field(self, field_solver):
+        field_solver.eval_potential_and_field()
 
     def push_particles(self):
         self.boris_integration(self.time_grid.time_step_size)
 
-    def generate_and_prepare_particles(self, initial=False):
+    def generate_and_prepare_particles(self, field_solver, initial=False):
         self.generate_valid_particles(initial)
         if self.particle_interaction_model == Model.PIC:
             self.eval_charge_density()
-            self.eval_potential_and_fields()
+            self.eval_potential_and_field(field_solver)
         self.shift_new_particles_velocities_half_time_step_back()
         self.consolidate_particle_arrays()
 
