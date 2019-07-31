@@ -78,4 +78,4 @@ class OutputWriterCpp(OutputWriterNumberedH5):
 
         g = h5file.create_group('ParticleInteractionModel')
         g.attrs['particle_interaction_model'] = \
-            np.string_(sim.particle_interaction_model.particle_interaction_model.name.encode('utf8') + b'\x00')
+            np.string_(sim.particle_interaction_model.name.encode('utf8') + b'\x00')

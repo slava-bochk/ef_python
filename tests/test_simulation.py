@@ -12,7 +12,7 @@ from ef.field.expression import FieldExpression
 from ef.field.uniform import FieldUniform
 from ef.inner_region import InnerRegion
 from ef.particle_array import ParticleArray
-from ef.particle_interaction_model import ParticleInteractionModel
+from ef.particle_interaction_model import Model
 from ef.runner import Runner
 from ef.spatial_mesh import SpatialMesh
 from ef.time_grid import TimeGrid
@@ -44,7 +44,7 @@ class TestSimulation:
         assert sim.particle_sources == []
         assert sim.electric_fields == FieldZero('ZeroSum', 'electric')
         assert sim.magnetic_fields == FieldZero('ZeroSum', 'magnetic')
-        assert sim.particle_interaction_model == ParticleInteractionModel("PIC")
+        assert sim.particle_interaction_model == Model.PIC
 
     def test_all_config(self):
         efconf = self.sim_full_config
@@ -63,7 +63,7 @@ class TestSimulation:
                                         ParticleSourceConf('d', Tube(start=(0, 0, 0), end=(0, 0, 1))).make()]
         assert sim.electric_fields == FieldUniform('x', 'electric', np.array((-2, -2, 1)))
         assert sim.magnetic_fields == FieldExpression('y', 'magnetic', '0', '0', '3*x + sqrt(y) - z**2')
-        assert sim.particle_interaction_model == ParticleInteractionModel("binary")
+        assert sim.particle_interaction_model == Model.binary
 
     def test_binary_field(self):
         d = Config().make()
@@ -100,8 +100,7 @@ class TestSimulation:
         conf = Config(TimeGridConf(0.001, save_step=.0005, step=0.0001), SpatialMeshConf((10, 10, 10), (1, 1, 1)),
                       sources=[ParticleSourceConf('gas', Box((4, 4, 4), size=(1, 1, 1)), 50, 0, np.zeros(3), 0.00),
                                ParticleSourceConf('gas2', Box((5, 5, 5), size=(1, 1, 1)), 50, 0, np.zeros(3), 0.00)],
-                      particle_interaction_model=ParticleInteractionModelConf('noninteracting')
-                      )
+                      particle_interaction_model=ParticleInteractionModelConf('noninteracting'))
         assert len(conf.sources) == 2
         sim = conf.make()
         assert len(sim.particle_sources) == 2

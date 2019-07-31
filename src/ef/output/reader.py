@@ -3,7 +3,7 @@ import numpy as np
 from ef.field import Field
 from ef.inner_region import InnerRegion
 from ef.particle_array import ParticleArray
-from ef.particle_interaction_model import ParticleInteractionModel
+from ef.particle_interaction_model import Model
 from ef.particle_source import ParticleSource
 from ef.simulation import Simulation
 from ef.spatial_mesh import SpatialMesh
@@ -28,9 +28,11 @@ class Reader:
         if format_ == 'cpp':
             return Reader.import_from_h5(h5file)
         elif format_ == 'python':
-            return Simulation.load_h5(h5file)
+            sim = Simulation.load_h5(h5file)
         else:
-            return Simulation.load_h5(h5file['simulation'])
+            sim = Simulation.load_h5(h5file['simulation'])
+        sim.particle_interaction_model = Model[sim.particle_interaction_model]
+        return sim
 
     @staticmethod
     def import_from_h5(h5file):
@@ -44,6 +46,8 @@ class Reader:
             inner_regions=[InnerRegion.import_h5(g) for g in h5file['InnerRegions'].values()],
             electric_fields=[f for f in fields if f.electric_or_magnetic == 'electric'],
             magnetic_fields=[f for f in fields if f.electric_or_magnetic == 'magnetic'],
-            particle_interaction_model=ParticleInteractionModel.import_h5(h5file['ParticleInteractionModel']),
+            particle_interaction_model=Model[
+                h5file['ParticleInteractionModel'].attrs['particle_interaction_model'].decode('utf8')
+            ],
             particle_sources=sources, particle_arrays=particles, max_id=max_id
         )

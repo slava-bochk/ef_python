@@ -5,6 +5,7 @@ import numpy as np
 from ef.field import FieldZero, FieldSum
 from ef.field.particles import FieldParticles
 from ef.particle_array import ParticleArray
+from ef.particle_interaction_model import Model
 from ef.util.serializable_h5 import SerializableH5
 
 
@@ -24,11 +25,11 @@ class Simulation(SerializableH5):
         self.consolidate_particle_arrays()
         self._field_solver = None
 
-        if self.particle_interaction_model.binary:
+        if self.particle_interaction_model == Model.binary:
             self._dynamic_field = FieldParticles('binary_particle_field', self.particle_arrays)
             if self.inner_regions or not self.spat_mesh.is_potential_equal_on_boundaries():
                 self._dynamic_field += self.spat_mesh
-        elif self.particle_interaction_model.noninteracting:
+        elif self.particle_interaction_model == Model.noninteracting:
             if self.inner_regions or not self.spat_mesh.is_potential_equal_on_boundaries():
                 self._dynamic_field = self.spat_mesh
             else:
@@ -56,7 +57,7 @@ class Simulation(SerializableH5):
 
     def generate_and_prepare_particles(self, initial=False):
         self.generate_valid_particles(initial)
-        if self.particle_interaction_model.pic:
+        if self.particle_interaction_model == Model.PIC:
             self.eval_charge_density()
             self.eval_potential_and_fields()
         self.shift_new_particles_velocities_half_time_step_back()

@@ -2,6 +2,7 @@ import h5py
 import numpy as np
 
 from ef.output import OutputWriter
+from ef.particle_interaction_model import Model
 
 
 class OutputWriterHistory(OutputWriter):
@@ -29,11 +30,11 @@ class OutputWriterHistory(OutputWriter):
                 h['/particles/momentum'][id, t] = p.momentums[i]
                 h['/particles/mass'][id] = p.mass
                 h['/particles/charge'][id] = p.charge
-        if sim.particle_interaction_model.pic:
+        if sim.particle_interaction_model == Model.PIC:
             h['/field/potential'][t] = sim.spat_mesh.potential
 
     def init_file(self, sim, h5file):
-        h = self.h5file.create_group('history')
+        h = h5file.create_group('history')
         n_particles = sum(s.initial_number_of_particles +
                           s.particles_to_generate_each_step * sim.time_grid.total_nodes
                           for s in sim.particle_sources)
@@ -69,7 +70,7 @@ class OutputWriterHistory(OutputWriter):
         h['particles/charge'].dims[0].label = 'id'
         h['particles/charge'].dims.create_scale(h['particles/ids'], 'ids')
         h['particles/charge'].dims[0].attach_scale(h['particles/ids'])
-        if sim.particle_interaction_model.pic:
+        if sim.particle_interaction_model == Model.PIC:
             h.create_dataset('field/potential', (n_time, *sim.spat_mesh.n_nodes))
             h['field/potential'].dims[0].label = 'time'
             h['field/potential'].dims.create_scale(h['time'], 'time')
