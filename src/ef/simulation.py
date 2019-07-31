@@ -9,6 +9,12 @@ from ef.particle_interaction_model import Model
 from ef.util.serializable_h5 import SerializableH5
 
 
+def is_trivial(spat_mesh, inner_regions):
+    if not spat_mesh.is_potential_equal_on_boundaries():
+        return False
+    return len({spat_mesh.potential[0, 0, 0]} | {ir.potential for ir in inner_regions}) == 1
+
+
 class Simulation(SerializableH5):
     def __init__(self, time_grid, spat_mesh, inner_regions,
                  particle_sources,
@@ -27,10 +33,10 @@ class Simulation(SerializableH5):
 
         if self.particle_interaction_model == Model.binary:
             self._dynamic_field = FieldParticles('binary_particle_field', self.particle_arrays)
-            if self.inner_regions or not self.spat_mesh.is_potential_equal_on_boundaries():
+            if not is_trivial(spat_mesh, inner_regions):
                 self._dynamic_field += self.spat_mesh
         elif self.particle_interaction_model == Model.noninteracting:
-            if self.inner_regions or not self.spat_mesh.is_potential_equal_on_boundaries():
+            if not is_trivial(spat_mesh, inner_regions):
                 self._dynamic_field = self.spat_mesh
             else:
                 self._dynamic_field = FieldZero('Uniform_potential_zero_field', 'electric')
