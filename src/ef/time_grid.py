@@ -46,6 +46,10 @@ class TimeGrid(SerializableH5):
         self.current_node += 1
         self.current_time += self.time_step_size
 
+    @property
+    def should_save(self):
+        return self.current_node % self.node_to_save == 0
+
     @staticmethod
     def import_h5(g):
         ga = g.attrs

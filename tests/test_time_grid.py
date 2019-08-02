@@ -62,6 +62,17 @@ class TestTimeGrid:
         assert t.current_node == 124
         assert t.current_time == pytest.approx(4.14)
 
+    def test_should_save(self):
+        t = TimeGrid(100, 1, 3)
+        assert t.should_save
+        for _ in range(10):
+            t.update_to_next_step()
+            assert not t.should_save
+            t.update_to_next_step()
+            assert not t.should_save
+            t.update_to_next_step()
+            assert t.should_save
+
     def test_init_h5(self):
         bio = BytesIO()
         grid1 = TimeGrid(123, 3, 13, 3.14, 111)

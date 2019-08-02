@@ -29,9 +29,7 @@ class Runner:
             self.write_step_to_save()
 
     def write_step_to_save(self):
-        current_step = self.simulation.time_grid.current_node
-        step_to_save = self.simulation.time_grid.node_to_save
-        if (current_step % step_to_save) == 0:
+        if self.simulation.time_grid.should_save:
             print()
             self.write()
 
