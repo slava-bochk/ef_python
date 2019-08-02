@@ -74,11 +74,8 @@ class SpatialMesh(SerializableH5):
         for p in particle_arrays:
             self.charge_density += self.mesh.distribute_scalar_at_positions(p.charge, p.positions)
 
-    def field_at_position(self, positions):
-        return self.mesh.interpolate_field_at_positions(self.electric_field, positions)
-
     def get_at_points(self, positions, time):
-        return self.field_at_position(positions)
+        return self.mesh.interpolate_field_at_positions(self.electric_field, positions)
 
     def clear_old_density_values(self):
         self.charge_density.fill(0)

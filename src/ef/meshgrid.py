@@ -70,18 +70,4 @@ class MeshGrid(SerializableH5):
         xyz = tuple(np.linspace(self.origin[i], self.origin[i] + self.size[i], self.n_nodes[i]) for i in (0, 1, 2))
         interpolator = RegularGridInterpolator(xyz, field, bounds_error=False, fill_value=0)
         return interpolator(positions)
-        #
-        # node, remainder = np.divmod(positions - self.origin, self.cell)
-        # node = node.astype(int)  # shape is (p, 3)
-        # wx, wy, wz = (remainder / self.cell).transpose()
-        # field_on_nodes = np.zeros((*field.shape[3:], len(positions)))  # (F, np)
-        # for dn in product((0, 1), repeat=3):
-        #     dx, dy, dz = dn
-        #     nodes_to_use = node + dn  # (np, 3)
-        #     out_of_bounds = np.logical_or(nodes_to_use >= self.n_nodes, nodes_to_use < 0).any(axis=-1)  # (np)
-        #     field_this_cycle = np.zeros((*field.shape[3:], len(positions)))  # (F, np)
-        #     field_this_cycle[..., ~out_of_bounds] = field[
-        #         tuple(nodes_to_use[~out_of_bounds].transpose())].transpose()  # sorry...
-        #     weight_on_nodes = (wx if dx else 1. - wx) * (wy if dy else 1. - wy) * (wz if dz else 1. - wz)
-        #     field_on_nodes += field_this_cycle * weight_on_nodes
-        # return field_on_nodes.transpose()
+

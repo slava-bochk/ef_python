@@ -53,9 +53,6 @@ class Simulation(SerializableH5):
         self.spat_mesh.clear_old_density_values()
         self.spat_mesh.weight_particles_charge_to_mesh(self.particle_arrays)
 
-    def eval_potential_and_field(self, field_solver):
-        field_solver.eval_potential_and_field()
-
     def push_particles(self):
         self.boris_integration(self.time_grid.time_step_size)
 
@@ -63,7 +60,7 @@ class Simulation(SerializableH5):
         self.generate_valid_particles(initial)
         if self.particle_interaction_model == Model.PIC:
             self.eval_charge_density()
-            self.eval_potential_and_field(field_solver)
+            field_solver.eval_potential_and_field()
         self.shift_new_particles_velocities_half_time_step_back()
         self.consolidate_particle_arrays()
 

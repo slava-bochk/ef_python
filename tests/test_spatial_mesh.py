@@ -3,12 +3,11 @@ import logging
 import h5py
 import numpy as np
 import pytest
-from numpy.testing import assert_array_equal, assert_array_almost_equal
+from numpy.testing import assert_array_equal
 
 from ef.config.components import SpatialMeshConf, BoundaryConditionsConf
-from ef.particle_array import ParticleArray
-from ef.spatial_mesh import SpatialMesh
 from ef.meshgrid import MeshGrid
+from ef.spatial_mesh import SpatialMesh
 
 
 class TestDefaultSpatialMesh:
@@ -151,51 +150,6 @@ class TestDefaultSpatialMesh:
         assert_array_equal(d["electric_field"], np.zeros((3, 3, 2, 3)))
         assert_array_equal(d["potential"], np.zeros((3, 3, 2)))
         assert_array_equal(d["charge_density"], np.zeros((3, 3, 2)))
-
-    def test_weight_particles_charge_to_mesh(self):
-        mesh = SpatialMeshConf((1, 1, 1), (1, 1, 1)).make(BoundaryConditionsConf())
-        particle_arrays = [ParticleArray(range(1000), charge=8, mass=1,
-                                         positions=np.full((1000, 3), 0.5), momentums=np.zeros((1000, 3)))]
-        mesh.weight_particles_charge_to_mesh(particle_arrays)
-        assert_array_equal(mesh.charge_density, np.full((2, 2, 2), 1000))
-        mesh.clear_old_density_values()
-
-        particle_arrays = [ParticleArray(range(1000), charge=1, mass=1,
-                                         positions=np.full((1000, 3), 0.1), momentums=np.zeros((1000, 3)))]
-        mesh.weight_particles_charge_to_mesh(particle_arrays)
-        assert_array_almost_equal(mesh.charge_density, [[[729, 81], [81, 9]],
-                                                        [[81, 9], [9, 1]]])
-
-        mesh = SpatialMeshConf((2, 4, 8), (1, 2, 4)).make(BoundaryConditionsConf())
-        particle_arrays = [ParticleArray(1, -2, 4, [(1, 1, 3)], [(0, 0, 0)])]
-        mesh.weight_particles_charge_to_mesh(particle_arrays)
-        assert_array_equal(mesh.charge_density,
-                           np.array([[[0, 0, 0], [0, 0, 0], [0, 0, 0]],
-                                     [[-0.25 / 8, -0.75 / 8, 0], [-0.25 / 8, -0.75 / 8, 0], [0, 0, 0]],
-                                     [[0, 0, 0], [0, 0, 0], [0, 0, 0]]]))
-        particle_arrays = [ParticleArray([1, 2], -2, 4, [(1, 1, 3), (1, 1, 3)], np.zeros((2, 3)))]
-        mesh.clear_old_density_values()
-        mesh.weight_particles_charge_to_mesh(particle_arrays)
-        assert_array_equal(mesh.charge_density,
-                           np.array([[[0, 0, 0], [0, 0, 0], [0, 0, 0]],
-                                     [[-0.25 / 4, -0.75 / 4, 0], [-0.25 / 4, -0.75 / 4, 0], [0, 0, 0]],
-                                     [[0, 0, 0], [0, 0, 0], [0, 0, 0]]]))
-        mesh.clear_old_density_values()
-        particle_arrays = [ParticleArray(1, -2, 4, [(2, 4, 8)], [(0, 0, 0)])]
-        mesh.weight_particles_charge_to_mesh(particle_arrays)
-        assert_array_equal(mesh.charge_density,
-                           np.array([[[0, 0, 0], [0, 0, 0], [0, 0, 0]],
-                                     [[0, 0, 0], [0, 0, 0], [0, 0, 0]],
-                                     [[0, 0, 0], [0, 0, 0], [0, 0, -0.25]]]))
-        particle_arrays = [ParticleArray(1, -2, 4, [(1, 2, 8.1)], [(0, 0, 0)])]
-        with pytest.raises(ValueError, match="Position is out of meshgrid bounds"):
-            mesh.weight_particles_charge_to_mesh(particle_arrays)
-
-    def test_field_at_position(self):
-        mesh = SpatialMeshConf((2, 4, 8), (1, 2, 4)).make(BoundaryConditionsConf())
-        mesh.electric_field[1:2, 0:2, 0:2] = np.array([[[2, 1, 0], [-3, 1, 0]],
-                                                       [[0, -1, 0], [-1, 0, 0]]])
-        assert_array_equal(mesh.field_at_position([(1, 1, 3)]), [(-1.25, 0.375, 0)])
 
     def test_eval_field_from_potential(self):
         mesh = SpatialMeshConf((1.5, 2, 1), (0.5, 1, 1)).make(BoundaryConditionsConf())
