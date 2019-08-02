@@ -3,7 +3,7 @@ import os.path
 import numpy as np
 
 from ef.field import Field
-from ef.spatial_mesh import MeshGrid
+from ef.meshgrid import MeshGrid
 
 
 class FieldOnGrid(Field):

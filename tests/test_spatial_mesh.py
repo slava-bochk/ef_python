@@ -7,7 +7,8 @@ from numpy.testing import assert_array_equal, assert_array_almost_equal
 
 from ef.config.components import SpatialMeshConf, BoundaryConditionsConf
 from ef.particle_array import ParticleArray
-from ef.spatial_mesh import SpatialMesh, MeshGrid
+from ef.spatial_mesh import SpatialMesh
+from ef.meshgrid import MeshGrid
 
 
 class TestDefaultSpatialMesh:
