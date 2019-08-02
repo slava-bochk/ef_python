@@ -2,16 +2,19 @@ import numpy as np
 from scipy.interpolate import RegularGridInterpolator
 
 from ef.util.serializable_h5 import SerializableH5
+from ef.util.vector import vector
 
 
 class MeshGrid(SerializableH5):
     def __init__(self, size, n_nodes, origin=(0, 0, 0)):
-        self.size = size
-        self.n_nodes = n_nodes
-        self.origin = np.asarray(origin)
+        self.size = vector(size)
+        self.n_nodes = vector(n_nodes, np.int)
+        self.origin = vector(origin)
 
     @classmethod
     def from_step(cls, size, step, origin=(0, 0, 0)):
+        size = vector(size)
+        step = vector(step)
         n_nodes = np.ceil(size / step).astype(int) + 1
         return cls(size, n_nodes, origin)
 
