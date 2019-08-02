@@ -3,6 +3,7 @@ from configparser import ConfigParser
 from io import StringIO
 
 import h5py
+import pytest
 from pytest import raises
 
 from ef.config.components import TimeGridConf, OutputFileConf
@@ -71,11 +72,13 @@ def test_guess_stdin(tmpdir, monkeypatch):
     assert guess_input_type('-') == (True, p)
 
 
-def test_main(mocker, capsys, tmpdir, monkeypatch):
+@pytest.mark.parametrize('solver', [None, 'amg', 'amgx'])
+def test_main(mocker, capsys, tmpdir, monkeypatch, solver):
     monkeypatch.chdir(tmpdir)
     config = tmpdir.join("test_main.conf")
     Config(time_grid=TimeGridConf(10, 5, 1)).export_to_fname("test_main.conf")
-    mocker.patch("sys.argv", ["main.py", str(config)])
+    argv = ["main.py", str(config)] + ([] if solver is None else ["--solver", solver])
+    mocker.patch("sys.argv", argv)
     main()
     out, err = capsys.readouterr()
     assert err == ""
@@ -101,6 +104,7 @@ Writing step 10 to file
 Writing to file out_0000010.h5
 """
 
+    argv = ["main.py", "out_0000005.h5"] + ([] if solver is None else ["--solver", solver])
     mocker.patch("sys.argv", ["main.py", "out_0000005.h5"])
     main()
     out, err = capsys.readouterr()

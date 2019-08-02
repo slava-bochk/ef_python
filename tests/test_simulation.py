@@ -10,7 +10,6 @@ from ef.config.components import *
 from ef.config.config import Config
 from ef.field import FieldZero
 from ef.field.expression import FieldExpression
-from ef.field.solvers.field_solver import FieldSolver
 from ef.field.uniform import FieldUniform
 from ef.inner_region import InnerRegion
 from ef.particle_array import ParticleArray
@@ -29,7 +28,6 @@ class TestSimulation:
         assert sim.time_grid == TimeGrid(100, 1, 10)
         assert sim.spat_mesh == SpatialMesh.do_init((10, 10, 10), (1, 1, 1), BoundaryConditionsConf(0))
         assert sim.inner_regions == []
-        assert type(sim._field_solver) == FieldSolver
         assert sim.particle_sources == []
         assert sim.electric_fields == FieldZero('ZeroSum', 'electric')
         assert sim.magnetic_fields == FieldZero('ZeroSum', 'magnetic')
@@ -53,14 +51,14 @@ class TestSimulation:
 
         parser = ConfigParser()
         parser.read_string(efconf.export_to_string())
-        sim = Config.from_configparser(parser).make()
+        conf = Config.from_configparser(parser)
+        sim = conf.make()
         assert sim.time_grid == TimeGrid(200, 2, 20)
         assert sim.spat_mesh == SpatialMesh.do_init((5, 5, 5), (.1, .1, .1), BoundaryConditionsConf(-2.7))
         assert sim.inner_regions == [InnerRegion('1', Box(), 1),
                                      InnerRegion('2', Sphere(), -2),
                                      InnerRegion('3', Cylinder(), 0),
                                      InnerRegion('4', Tube(), 4)]
-        assert type(sim._field_solver) == FieldSolver
         assert sim.particle_sources == [ParticleSourceConf('a', Box()).make(),
                                         ParticleSourceConf('c', Cylinder()).make(),
                                         ParticleSourceConf('d', Tube()).make()]
@@ -150,7 +148,7 @@ class TestSimulation:
                 ir.assert_eq(sim.inner_regions[i])
             sim2.assert_eq(sim)
 
-    def test_particle_generation(self, monkeypatch,  tmpdir):
+    def test_particle_generation(self, monkeypatch, tmpdir):
         monkeypatch.chdir(tmpdir)
         conf = Config(TimeGridConf(2, 1, 1), SpatialMeshConf((5, 5, 5), (.1, .1, .1)),
                       sources=[ParticleSourceConf('a', Box((2, 2, 2), (0, 0, 0)), 2, 1, (0, 0, 0), 0, charge=0),

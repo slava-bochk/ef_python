@@ -7,7 +7,7 @@ from ef.field import FieldZero, FieldSum, Field
 from ef.field.expression import FieldExpression
 from ef.field.on_grid import FieldOnGrid
 from ef.field.particles import FieldParticles
-from ef.field.solvers.field_solver import FieldSolver
+from ef.field.solvers.pyamg import FieldSolverPyamg
 from ef.field.uniform import FieldUniform
 from ef.inner_region import InnerRegion
 from ef.particle_array import ParticleArray
@@ -29,7 +29,6 @@ class Simulation(SerializableH5):
         self.time_grid = time_grid
         self.spat_mesh = spat_mesh
         self.inner_regions = inner_regions
-        self._field_solver = FieldSolver(spat_mesh, inner_regions)
         self.particle_sources = particle_sources
         self.electric_fields = FieldSum.factory(electric_fields, 'electric')
         self.magnetic_fields = FieldSum.factory(magnetic_fields, 'magnetic')
@@ -65,7 +64,8 @@ class Simulation(SerializableH5):
             simulation._output_format = output_format
         return simulation
 
-    def start_pic_simulation(self):
+    def start_pic_simulation(self, solver_class=FieldSolverPyamg):
+        self._field_solver = solver_class(self.spat_mesh, self.inner_regions)
         self.eval_and_write_fields_without_particles()
         if self._output_format == "history":
             self.create_history_file()
@@ -73,7 +73,8 @@ class Simulation(SerializableH5):
         self.write_step_to_save()
         self.run_pic()
 
-    def continue_pic_simulation(self):
+    def continue_pic_simulation(self, solver_class=FieldSolverPyamg):
+        self._field_solver = solver_class(self.spat_mesh, self.inner_regions)
         if self._output_format == "history":
             self.create_history_file()
         self.run_pic()
@@ -97,8 +98,8 @@ class Simulation(SerializableH5):
         self.spat_mesh.weight_particles_charge_to_mesh(self.particle_arrays)
 
     def eval_potential_and_fields(self):
-        self._field_solver.eval_potential(self.spat_mesh, self.inner_regions)
-        self._field_solver.eval_fields_from_potential(self.spat_mesh)
+        self._field_solver.eval_potential()
+        self.spat_mesh.eval_field_from_potential()
 
     def push_particles(self):
         self.boris_integration(self.time_grid.time_step_size)

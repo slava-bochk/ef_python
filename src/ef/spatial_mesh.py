@@ -169,6 +169,9 @@ class SpatialMesh(SerializableH5):
                np.all(self.potential[:, 0] == p) and np.all(self.potential[:, -1] == p) and \
                np.all(self.potential[:, :, 0] == p) and np.all(self.potential[:, :, -1] == p)
 
+    def eval_field_from_potential(self):
+        self.electric_field = -np.stack(np.gradient(self.potential, *self.cell), -1)
+
     @classmethod
     def import_h5(cls, g):
         ga = g.attrs
