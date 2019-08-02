@@ -1,5 +1,5 @@
 import logging
-from math import ceil
+from math import floor, ceil
 
 from ef.config.components import time_grid
 from ef.util.serializable_h5 import SerializableH5
@@ -23,12 +23,12 @@ class TimeGrid(SerializableH5):
             logging.warning("Reducing time step to {:.3E} from {:.3E} "
                             "to fit a whole number of cells."
                             .format(self.time_step_size, time_step_size))
-        self.time_save_step = int(time_save_step / self.time_step_size) * self.time_step_size
+        self.time_save_step = floor(time_save_step / self.time_step_size) * self.time_step_size
         if self.time_save_step != time_save_step:
             logging.warning("Reducing save time step to {:.3E} from {:.3E} "
                             "to fit a whole number of cells."
                             .format(self.time_save_step, time_save_step))
-        self.node_to_save = int(self.time_save_step / self.time_step_size)
+        self.node_to_save = round(self.time_save_step / self.time_step_size)
         self.current_time = current_time
         self.current_node = current_node
 
