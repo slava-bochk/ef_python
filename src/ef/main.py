@@ -8,9 +8,11 @@ from configparser import ConfigParser
 
 import h5py
 
+from ef.config.components import OutputFileConf
 from ef.config.config import Config
-from ef.simulation import Simulation
 from ef.field.solvers import pyamg, pyamgx
+from ef.output.reader import Reader
+from ef.runner import Runner
 
 
 def main():
@@ -28,15 +30,18 @@ def main():
     is_config, parser_or_h5_filename = args.config_or_h5_file
     solver_class = {'amg': pyamg.FieldSolverPyamg, 'amgx': pyamgx.FieldSolverPyamgx}[args.solver]
     if is_config:
-        sim = read_conf(parser_or_h5_filename, args.prefix, args.suffix, args.output_format).make()
-        sim.start_pic_simulation(solver_class)
+        conf = read_conf(parser_or_h5_filename, args.prefix, args.suffix, args.output_format)
+        sim = conf.make()
+        writer = conf.make_writer()
+        Runner(sim, solver_class(sim.spat_mesh, sim.inner_regions), writer).start()
     else:
         print("Continuing from h5 file:", parser_or_h5_filename)
         prefix, suffix = merge_h5_prefix_suffix(parser_or_h5_filename, args.prefix, args.suffix)
         print("Using output prefix and suffix:", prefix, suffix)
         with h5py.File(parser_or_h5_filename, 'r') as h5file:
-            sim = Simulation.init_from_h5(h5file, prefix, suffix, args.output_format)
-        sim.continue_pic_simulation(solver_class)
+            sim = Reader.read_simulation(h5file)
+        writer = OutputFileConf(prefix, suffix, args.output_format).make()
+        Runner(sim, solver_class(sim.spat_mesh, sim.inner_regions), writer).continue_()
     del sim
     return 0
 

@@ -79,8 +79,9 @@ class FieldSolver:
     def create_solver_and_preconditioner(self):
         raise NotImplementedError()
 
-    def eval_potential(self):
+    def eval_potential_and_field(self):
         self.solve_poisson_eqn()
+        self.spat_mesh.eval_field_from_potential()
 
     def solve_poisson_eqn(self):
         raise NotImplementedError()
