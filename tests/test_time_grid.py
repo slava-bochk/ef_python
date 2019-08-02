@@ -19,14 +19,14 @@ class TestTimeGrid:
         assert t.node_to_save == 4
         assert t.current_time == 0
         assert t.current_node == 0
-        t = TimeGrid(123, 4, 13, 3.14, 1234)
+        t = TimeGrid(123, 4, 13, 1000)
         assert t.total_time == 123
         assert t.total_nodes == 32
         assert t.time_step_size == 123 / 31
         assert t.time_save_step == 123 / 31 * 3
         assert t.node_to_save == 3
-        assert t.current_time == 3.14
-        assert t.current_node == 1234
+        assert t.current_time == pytest.approx(123000/31)
+        assert t.current_node == 1000
 
     def test_init_exceptions(self):
         with raises(ValueError, match="Expect total_time > 0"):
@@ -45,8 +45,8 @@ class TestTimeGrid:
         assert t.time_save_step == 1000
 
     def test_dict(self):
-        assert TimeGrid(100, 1, 10, 3.14, 123).dict == {'total_time': 100, 'time_step_size': 1, 'time_save_step': 10,
-                                                        'current_time': 3.14, 'current_node': 123}
+        assert TimeGrid(100, 1, 10, 123).dict == {'total_time': 100, 'time_step_size': 1, 'time_save_step': 10,
+                                                  'current_node': 123}
 
     def test_config_make(self):
         assert time_grid.TimeGridConf().make() == TimeGrid(100.0, 1.0, 10.0)
@@ -57,10 +57,10 @@ class TestTimeGrid:
         assert TimeGrid(123, 3, 13).to_component() == time_grid.TimeGridConf(123, 12, 3)
 
     def test_update_next_step(self):
-        t = TimeGrid(100, 1, 10, 3.14, 123)
+        t = TimeGrid(100, 1, 10, 123)
         t.update_to_next_step()
         assert t.current_node == 124
-        assert t.current_time == pytest.approx(4.14)
+        assert t.current_time == 124
 
     def test_should_save(self):
         t = TimeGrid(100, 1, 3)
@@ -75,7 +75,7 @@ class TestTimeGrid:
 
     def test_init_h5(self):
         bio = BytesIO()
-        grid1 = TimeGrid(123, 3, 13, 3.14, 111)
+        grid1 = TimeGrid(123, 3, 13, 111)
         with h5py.File(bio, mode="w") as h5file:
             grid1.save_h5(h5file.create_group("/gr"))
         with h5py.File(bio, mode="r") as h5file:
@@ -84,7 +84,7 @@ class TestTimeGrid:
 
     def test_import_h5(self, tmpdir):
         bio = BytesIO()
-        grid1 = TimeGrid(123, 3, 13, 3.14, 111)
+        grid1 = TimeGrid(123, 3, 13, 111)
         with h5py.File(bio, mode="w") as h5file:
             grid1.export_h5(h5file.create_group("/gr"))
         with h5py.File(bio, mode="r") as h5file:
@@ -96,8 +96,5 @@ class TestTimeGrid:
         assert str(grid) == ("### TimeGrid:\n"
                              "total_time = 100.0\n"
                              "total_nodes = 101\n"
-                             "time_step_size = 1.0\n"
-                             "time_save_step = 10.0\n"
                              "node_to_save = 10\n"
-                             "current_time = 0.0\n"
                              "current_node = 0")
