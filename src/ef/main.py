@@ -10,7 +10,7 @@ import h5py
 
 from ef.config.components import OutputFileConf
 from ef.config.config import Config
-from ef.field.solvers import pyamg, pyamgx
+from ef.field.solvers import pyamg
 from ef.output.reader import Reader
 from ef.runner import Runner
 
@@ -28,7 +28,11 @@ def main():
     args = parser.parse_args()
 
     is_config, parser_or_h5_filename = args.config_or_h5_file
-    solver_class = {'amg': pyamg.FieldSolverPyamg, 'amgx': pyamgx.FieldSolverPyamgx}[args.solver]
+    if args.solver == 'amg':
+        solver_class = pyamg.FieldSolverPyamg
+    elif args.solver == 'amgx':
+        from ef.field.solvers import pyamgx
+        solver_class = pyamgx.FieldSolverPyamgx
     if is_config:
         conf = read_conf(parser_or_h5_filename, args.prefix, args.suffix, args.output_format)
         sim = conf.make()

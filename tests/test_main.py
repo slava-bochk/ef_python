@@ -72,7 +72,7 @@ def test_guess_stdin(tmpdir, monkeypatch):
     assert guess_input_type('-') == (True, p)
 
 
-@pytest.mark.parametrize('solver', [None, 'amg', 'amgx'])
+@pytest.mark.parametrize('solver', [None, 'amg', pytest.param('amgx', marks=pytest.mark.amgx)])
 def test_main(mocker, capsys, tmpdir, monkeypatch, solver):
     monkeypatch.chdir(tmpdir)
     config = tmpdir.join("test_main.conf")
