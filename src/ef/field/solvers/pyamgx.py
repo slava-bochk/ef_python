@@ -18,19 +18,20 @@ class FieldSolverPyamgx(FieldSolver):
         self.tol = 1e-10
         pyamgx.initialize()
         self.cfg = pyamgx.Config()
-        self.cfg.create_from_dict({
+        # "print_solve_stats": 1
+        # "obtain_timings": 1,
+        # "print_grid_stats": 1,
+        conf_string = """{{
             "config_version": 2,
-            "solver": {
+            "solver": {{
                 "solver": "CG",
-                "max_iters": self.maxiter,
+                "max_iters": {maxiter},
                 "monitor_residual": 1,
-                "tolerance": self.tol,
-                "norm": "L2",
-                # "print_solve_stats": 1
-                # "obtain_timings": 1,
-                # "print_grid_stats": 1,
-            }
-        })
+                "tolerance": {tol},
+                "norm": "L2"
+            }}
+        }}""".format(tol=self.tol, maxiter=self.maxiter)
+        self.cfg.create(conf_string)
         self.resources = pyamgx.Resources().create_simple(self.cfg)
         self._rhs = pyamgx.Vector().create(self.resources).upload(self.rhs)
         self._phi_vec = pyamgx.Vector().create(self.resources).upload(self.phi_vec)
