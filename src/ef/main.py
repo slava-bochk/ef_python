@@ -19,7 +19,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("config_or_h5_file", help="config or h5 file", type=guess_input_type)
     parser.add_argument("--output-format", default="cpp", help="select output hdf5 format",
-                        choices=["python", "cpp", "history"])
+                        choices=["python", "cpp", "history", "none"])
     parser.add_argument("--prefix", help="customize output file prefix")
     parser.add_argument("--suffix", help="customize output file suffix")
     parser.add_argument("--solver", default="amg", help="select field solving library",
