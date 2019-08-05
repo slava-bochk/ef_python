@@ -15,7 +15,11 @@ class MeshGrid(SerializableH5):
     @classmethod
     def from_step(cls, size, step, origin=(0, 0, 0)):
         size = vector(size)
+        if np.any(size <= 0):
+            raise ValueError('Grid size must be positive', size)
         step = vector(step)
+        if np.any(step <= 0):
+            raise ValueError('Grid step must be positive', step)
         n_nodes = np.ceil(size / step).astype(int) + 1
         mesh = cls(size, n_nodes, origin)
         for i in np.nonzero(mesh.cell != step)[0]:
