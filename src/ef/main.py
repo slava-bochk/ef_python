@@ -36,7 +36,7 @@ def main():
     if is_config:
         conf = read_conf(parser_or_h5_filename, args.prefix, args.suffix, args.output_format)
         sim = conf.make()
-        writer = conf.make_writer()
+        writer = conf.output_file.make()
         Runner(sim, solver_class(sim.mesh, sim.inner_regions), writer).start()
     else:
         print("Continuing from h5 file:", parser_or_h5_filename)

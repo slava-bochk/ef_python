@@ -113,8 +113,10 @@ class Config(DataClass):
         return simulation.Simulation(grid, mesh, charge, potential, electric_field,
                                      regions, sources, electric_fields, magnetic_fields, model)
 
-    def make_writer(self):
-        return self.output_file.make()
+    def is_trivial(self):
+        if not self.boundary_conditions.is_the_same_on_all_boundaries:
+            return False
+        return len({self.boundary_conditions.right} | {ir.potential for ir in self.inner_regions}) == 1
 
 
 def main():
