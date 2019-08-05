@@ -1,5 +1,4 @@
 import h5py
-import pytest
 
 from ef.config.config import Config
 from ef.output import OutputWriterNumberedH5, OutputWriterNone

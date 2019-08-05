@@ -5,7 +5,7 @@ from ef.output import OutputWriterNone
 class Runner:
     def __init__(self, simulation, solver=None, output_writer=OutputWriterNone()):
         if solver is None:
-            solver = FieldSolverPyamg(simulation.spat_mesh.mesh, simulation.inner_regions)
+            solver = FieldSolverPyamg(simulation.mesh, simulation.inner_regions)
         self.output_writer = output_writer
         self.simulation = simulation
         self.solver = solver
@@ -38,8 +38,8 @@ class Runner:
         self.output_writer.write(self.simulation)
 
     def eval_and_write_fields_without_particles(self):
-        self.simulation.spat_mesh.charge_density.reset()
-        self.solver.eval_potential(self.simulation.spat_mesh.charge_density, self.simulation.spat_mesh.potential)
-        self.simulation.spat_mesh.electric_field.array = self.simulation.spat_mesh.potential.gradient()
+        self.simulation.charge_density.reset()
+        self.solver.eval_potential(self.simulation.charge_density, self.simulation.potential)
+        self.simulation.electric_field.array = self.simulation.potential.gradient()
         print("Writing initial fields to file")
         self.output_writer.write(self.simulation, "fieldsWithoutParticles")

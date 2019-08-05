@@ -1,10 +1,13 @@
+from ef.field.on_grid import FieldOnGrid
+from ef.meshgrid import MeshGrid
+from ef.util.array_on_grid import ArrayOnGrid
+
 __all__ = ['SpatialMeshConf', 'SpatialMeshSection']
 
 from collections import namedtuple
 
 import numpy as np
 
-from ef import spatial_mesh
 from ef.config.component import ConfigComponent
 from ef.config.section import ConfigSection
 
@@ -22,8 +25,12 @@ class SpatialMeshConf(ConfigComponent):
         x, y, z = self.step
         return SpatialMeshSection(X, x, Y, y, Z, z)
 
-    def make(self, boundary_conditions):
-        return spatial_mesh.SpatialMesh.do_init(self.size, self.step, boundary_conditions)
+    def make(self):
+        grid = MeshGrid.from_step(self.size, self.step)
+        charge_density = ArrayOnGrid(grid)
+        potential = ArrayOnGrid(grid)
+        electric_field = FieldOnGrid('spatial_mesh', 'electric', ArrayOnGrid(grid, 3))
+        return grid, charge_density, potential, electric_field
 
 
 class SpatialMeshSection(ConfigSection):

@@ -5,11 +5,12 @@ import numpy as np
 
 from ef.config.components import Box
 from ef.field import FieldZero, FieldSum
+from ef.field.on_grid import FieldOnGrid
 from ef.field.particles import FieldParticles
 from ef.inner_region import InnerRegion
+from ef.meshgrid import MeshGrid
 from ef.particle_array import ParticleArray
 from ef.particle_interaction_model import Model
-from ef.spatial_mesh import SpatialMesh
 from ef.util.array_on_grid import ArrayOnGrid
 from ef.util.serializable_h5 import SerializableH5
 
@@ -21,13 +22,18 @@ def is_trivial(potential: ArrayOnGrid, inner_regions: List[InnerRegion]):
 
 
 class Simulation(SerializableH5):
-    def __init__(self, time_grid, spat_mesh: SpatialMesh, inner_regions: List[InnerRegion],
+    def __init__(self, time_grid,
+                 mesh: MeshGrid, charge_density: ArrayOnGrid, potential: ArrayOnGrid, electric_field: FieldOnGrid,
+                 inner_regions: List[InnerRegion],
                  particle_sources,
                  electric_fields, magnetic_fields, particle_interaction_model,
                  max_id=-1, particle_arrays=()):
         self.time_grid = time_grid
-        self.spat_mesh = spat_mesh
-        self._domain = InnerRegion('simulation_domain', Box(0, spat_mesh.mesh.size), inverted=True)
+        self.mesh = mesh
+        self.charge_density = charge_density
+        self.potential = potential
+        self.electric_field = electric_field
+        self._domain = InnerRegion('simulation_domain', Box(0, mesh.size), inverted=True)
         self.inner_regions = inner_regions
         self.particle_sources = particle_sources
         self.electric_fields = FieldSum.factory(electric_fields, 'electric')
@@ -38,15 +44,15 @@ class Simulation(SerializableH5):
 
         if self.particle_interaction_model == Model.binary:
             self._dynamic_field = FieldParticles('binary_particle_field', self.particle_arrays)
-            if not is_trivial(spat_mesh.potential, inner_regions):
-                self._dynamic_field += self.spat_mesh.electric_field
+            if not is_trivial(potential, inner_regions):
+                self._dynamic_field += self.electric_field
         elif self.particle_interaction_model == Model.noninteracting:
-            if not is_trivial(spat_mesh.potential, inner_regions):
-                self._dynamic_field = self.spat_mesh.electric_field
+            if not is_trivial(potential, inner_regions):
+                self._dynamic_field = self.electric_field
             else:
                 self._dynamic_field = FieldZero('Uniform_potential_zero_field', 'electric')
         else:
-            self._dynamic_field = self.spat_mesh.electric_field
+            self._dynamic_field = self.electric_field
 
         self.max_id = max_id
 
@@ -56,9 +62,9 @@ class Simulation(SerializableH5):
         self.update_time_grid()
 
     def eval_charge_density(self):
-        self.spat_mesh.charge_density.reset()
+        self.charge_density.reset()
         for p in self.particle_arrays:
-            self.spat_mesh.charge_density.distribute_at_positions(p.charge, p.positions)
+            self.charge_density.distribute_at_positions(p.charge, p.positions)
 
     def push_particles(self):
         self.boris_integration(self.time_grid.time_step_size)
@@ -67,8 +73,8 @@ class Simulation(SerializableH5):
         self.generate_valid_particles(initial)
         if self.particle_interaction_model == Model.PIC:
             self.eval_charge_density()
-            field_solver.eval_potential(self.spat_mesh.charge_density, self.spat_mesh.potential)
-            self.spat_mesh.electric_field.array = self.spat_mesh.potential.gradient()
+            field_solver.eval_potential(self.charge_density, self.potential)
+            self.electric_field.array = self.potential.gradient()
         self.shift_new_particles_velocities_half_time_step_back()
         self.consolidate_particle_arrays()
 

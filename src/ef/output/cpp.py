@@ -11,11 +11,11 @@ from ef.util.physical_constants import speed_of_light
 class OutputWriterCpp(OutputWriterNumberedH5):
     def do_write(self, sim, h5file):
         gg = h5file.create_group('SpatialMesh')
-        sim.spat_mesh.mesh.export_h5(gg)
+        sim.mesh.export_h5(gg)
         for i, c in enumerate('xyz'):
-            gg['electric_field_{}'.format(c)] = sim.spat_mesh.electric_field.array.data[..., i].flatten()
-        gg['charge_density'] = sim.spat_mesh.charge_density.data.flatten()
-        gg['potential'] = sim.spat_mesh.potential.data.flatten()
+            gg['electric_field_{}'.format(c)] = sim.electric_field.array.data[..., i].flatten()
+        gg['charge_density'] = sim.charge_density.data.flatten()
+        gg['potential'] = sim.potential.data.flatten()
 
         sim.time_grid.export_h5(h5file.create_group('TimeGrid'))
         g = h5file.create_group('ParticleSources')

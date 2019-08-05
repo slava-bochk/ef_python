@@ -8,7 +8,6 @@ from ef.particle_array import ParticleArray
 from ef.particle_interaction_model import Model
 from ef.particle_source import ParticleSource
 from ef.simulation import Simulation
-from ef.spatial_mesh import SpatialMesh
 from ef.time_grid import TimeGrid
 from ef.util.array_on_grid import ArrayOnGrid
 
@@ -20,7 +19,7 @@ class Reader:
             return 'cpp'
         elif 'history' in h5file:
             return 'history'
-        elif 'spat_mesh' in h5file:
+        elif 'time_grid' in h5file:
             return 'python'
         else:
             raise ValueError('Cannot guess hdf5 file format')
@@ -50,10 +49,9 @@ class Reader:
         field = FieldOnGrid('spatial_mesh', 'electric', ArrayOnGrid(mesh, 3, np.moveaxis(
             np.array([np.reshape(g['electric_field_{}'.format(c)], mesh.n_nodes) for c in 'xyz']),
             0, -1)))
-        spat_mesh = SpatialMesh(mesh, charge, potential, field)
         return Simulation(
             time_grid=TimeGrid.import_h5(h5file['TimeGrid']),
-            spat_mesh=spat_mesh,
+            mesh=mesh, charge_density=charge, potential=potential, electric_field=field,
             inner_regions=[InnerRegion.import_h5(g) for g in h5file['InnerRegions'].values()],
             electric_fields=[f for f in fields if f.electric_or_magnetic == 'electric'],
             magnetic_fields=[f for f in fields if f.electric_or_magnetic == 'magnetic'],
