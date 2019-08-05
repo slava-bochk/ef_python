@@ -34,20 +34,20 @@ class TestFieldSolver:
 
     def test_init_rhs(self):
         mesh = SpatialMeshConf((4, 3, 3)).make(BoundaryConditionsConf())
-        solver = FieldSolver(mesh, [])
-        solver.init_rhs_vector_in_full_domain()
+        solver = FieldSolver(mesh.mesh, [])
+        solver.init_rhs_vector_in_full_domain(mesh.charge_density, mesh.potential)
         assert_array_equal(solver.rhs, np.zeros(3 * 2 * 2))
         del solver
 
         mesh = SpatialMeshConf((4, 3, 3)).make(BoundaryConditionsConf(-2))
-        solver = FieldSolver(mesh, [])
-        solver.init_rhs_vector_in_full_domain()
+        solver = FieldSolver(mesh.mesh, [])
+        solver.init_rhs_vector_in_full_domain(mesh.charge_density, mesh.potential)
         assert_array_equal(solver.rhs, [6, 4, 6, 6, 4, 6, 6, 4, 6, 6, 4, 6])  # what
         del solver
 
         mesh = SpatialMeshConf((4, 4, 5)).make(BoundaryConditionsConf(-2))
-        solver = FieldSolver(mesh, [])
-        solver.init_rhs_vector_in_full_domain()
+        solver = FieldSolver(mesh.mesh, [])
+        solver.init_rhs_vector_in_full_domain(mesh.charge_density, mesh.potential)
         assert_array_equal(solver.rhs, [6, 4, 6, 4, 2, 4, 6, 4, 6,
                                         4, 2, 4, 2, 0, 2, 4, 2, 4,
                                         4, 2, 4, 2, 0, 2, 4, 2, 4,
@@ -55,8 +55,8 @@ class TestFieldSolver:
         del solver
 
         mesh = SpatialMeshConf((8, 12, 5), (2, 3, 1)).make(BoundaryConditionsConf(-1))
-        solver = FieldSolver(mesh, [])
-        solver.init_rhs_vector_in_full_domain()
+        solver = FieldSolver(mesh.mesh, [])
+        solver.init_rhs_vector_in_full_domain(mesh.charge_density, mesh.potential)
         assert_array_equal(solver.rhs, [49, 40, 49, 45, 36, 45, 49, 40, 49,
                                         13, 4, 13, 9, 0, 9, 13, 4, 13,
                                         13, 4, 13, 9, 0, 9, 13, 4, 13,
@@ -64,13 +64,13 @@ class TestFieldSolver:
         del solver
 
         mesh = SpatialMeshConf((4, 6, 9), (1, 2, 3)).make(BoundaryConditionsConf())
-        solver = FieldSolver(mesh, [])
+        solver = FieldSolver(mesh.mesh, [])
         mesh.charge_density.data = np.array([[[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
                                              [[0, 0, 0, 0], [0, 1, 2, 0], [0, -1, 0, 0], [0, 0, 0, 0]],
                                              [[0, 0, 0, 0], [0, 3, 4, 0], [0, 0, -1, 0], [0, 0, 0, 0]],
                                              [[0, 0, 0, 0], [0, 5, 6, 0], [0, -1, 0, 0], [0, 0, 0, 0]],
                                              [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]])
-        solver.init_rhs_vector_in_full_domain()
+        solver.init_rhs_vector_in_full_domain(mesh.charge_density, mesh.potential)
         assert_allclose(solver.rhs, -np.array([1, 3, 5, -1, 0, -1, 2, 4, 6, 0, -1, 0]) * np.pi * 4 * 36)
         del solver
 
@@ -78,7 +78,7 @@ class TestFieldSolver:
         solver = FieldSolver(mesh, [])
         nodep = solver.generate_nodes_in_regions([InnerRegion('test', Box((1, 2, 3), (1, 2, 3)), 3)])
         solver.nodes_in_regions, solver.potential_in_regions = nodep
-        solver.init_rhs_vector()
+        solver.init_rhs_vector(mesh.charge_density, mesh.potential)
         assert_array_equal(solver.rhs, [3, 3, 0, 3, 3, 0, 3, 3, 0, 3, 3, 0])
 
     def test_zero_nondiag_inside_objects(self):
@@ -228,9 +228,9 @@ class TestFieldSolver:
 
     def test_transfer_solution_to_spat_mesh(self):
         mesh = SpatialMeshConf((4, 6, 9), (1, 2, 3)).make(BoundaryConditionsConf())
-        solver = FieldSolver(mesh, [])
+        solver = FieldSolver(mesh.mesh, [])
         solver.phi_vec = np.array(range(1, 3 * 2 * 2 + 1))
-        solver.transfer_solution_to_spat_mesh()
+        solver.transfer_solution_to_spat_mesh(mesh.potential)
         assert_array_equal(mesh.potential.data[1:-1, 1:-1, 1:-1], [[[1, 7], [4, 10]],
                                                                    [[2, 8], [5, 11]],
                                                                    [[3, 9], [6, 12]]])

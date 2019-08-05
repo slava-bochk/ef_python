@@ -1,25 +1,30 @@
+from typing import List
+
 import numpy as np
 import scipy.sparse
 import scipy.sparse.linalg
 
+from ef.inner_region import InnerRegion
+from ef.meshgrid import MeshGrid
+
 
 class FieldSolver:
-    def __init__(self, spat_mesh, inner_regions):
+    def __init__(self, mesh: MeshGrid, inner_regions: List[InnerRegion]):
         if inner_regions:
             print("WARNING: field-solver: inner region support is untested")
             print("WARNING: proceed with caution")
-        self._double_index = self.double_index(spat_mesh.n_nodes)
-        self.spat_mesh = spat_mesh
+        self._double_index = self.double_index(mesh.n_nodes)
+        self.mesh = mesh
         self.nodes_in_regions, self.potential_in_regions = self.generate_nodes_in_regions(inner_regions)
-        nrows = (spat_mesh.n_nodes - 2).prod()
+        nrows = (mesh.n_nodes - 2).prod()
         self.A = self.construct_equation_matrix()
         self.phi_vec = np.empty(nrows)
         self.rhs = np.empty_like(self.phi_vec)
         self.create_solver_and_preconditioner()
 
     def construct_equation_matrix(self):
-        nx, ny, nz = self.spat_mesh.n_nodes - 2
-        cx, cy, cz = self.spat_mesh.cell ** 2
+        nx, ny, nz = self.mesh.n_nodes - 2
+        cx, cy, cz = self.mesh.cell ** 2
         dx, dy, dz = cy * cz, cx * cz, cx * cy
         matrix = dx * self.construct_d2dx2_in_3d(nx, ny, nz) + \
                  dy * self.construct_d2dy2_in_3d(nx, ny, nz) + \
@@ -53,7 +58,7 @@ class FieldSolver:
     def generate_nodes_in_regions(self, inner_regions):
         ijk = self._double_index[:, 1:]
         n = self._double_index[:, 0]
-        xyz = self.spat_mesh.cell * ijk
+        xyz = self.mesh.cell * ijk
         inside = np.zeros_like(n, np.bool)
         potential = np.empty_like(n, np.float)
         for ir in inner_regions:
@@ -79,34 +84,32 @@ class FieldSolver:
     def create_solver_and_preconditioner(self):
         raise NotImplementedError()
 
-    def eval_potential_and_field(self):
-        self.solve_poisson_eqn()
-        self.spat_mesh.eval_field_from_potential()
+    def eval_potential(self, charge_density, potential):
+        self.solve_poisson_eqn(charge_density, potential)
 
-    def solve_poisson_eqn(self):
+    def solve_poisson_eqn(self, charge_density, potential):
         raise NotImplementedError()
 
-    def init_rhs_vector(self):
-        self.init_rhs_vector_in_full_domain()
+    def init_rhs_vector(self, charge_density, potential):
+        self.init_rhs_vector_in_full_domain(charge_density, potential)
         self.set_rhs_for_nodes_inside_objects()
 
-    def init_rhs_vector_in_full_domain(self):
-        m = self.spat_mesh
-        rhs = -4 * np.pi * m.cell.prod() ** 2 * m.charge_density.data[1:-1, 1:-1, 1:-1]
-        dx, dy, dz = m.cell
-        rhs[0] -= dy * dy * dz * dz * m.potential.data[0, 1:-1, 1:-1]
-        rhs[-1] -= dy * dy * dz * dz * m.potential.data[-1, 1:-1, 1:-1]
-        rhs[:, 0] -= dx * dx * dz * dz * m.potential.data[1:-1, 0, 1:-1]
-        rhs[:, -1] -= dx * dx * dz * dz * m.potential.data[1:-1, -1, 1:-1]
-        rhs[:, :, 0] -= dx * dx * dy * dy * m.potential.data[1:-1, 1:-1, 0]
-        rhs[:, :, -1] -= dx * dx * dy * dy * m.potential.data[1:-1, 1:-1, -1]
+    def init_rhs_vector_in_full_domain(self, charge_density, potential):
+        rhs = -4 * np.pi * self.mesh.cell.prod() ** 2 * charge_density.data[1:-1, 1:-1, 1:-1]
+        dx, dy, dz = self.mesh.cell
+        rhs[0] -= dy * dy * dz * dz * potential.data[0, 1:-1, 1:-1]
+        rhs[-1] -= dy * dy * dz * dz * potential.data[-1, 1:-1, 1:-1]
+        rhs[:, 0] -= dx * dx * dz * dz * potential.data[1:-1, 0, 1:-1]
+        rhs[:, -1] -= dx * dx * dz * dz * potential.data[1:-1, -1, 1:-1]
+        rhs[:, :, 0] -= dx * dx * dy * dy * potential.data[1:-1, 1:-1, 0]
+        rhs[:, :, -1] -= dx * dx * dy * dy * potential.data[1:-1, 1:-1, -1]
         self.rhs = rhs.ravel('F')
 
     def set_rhs_for_nodes_inside_objects(self):
         self.rhs[self.nodes_in_regions] = self.potential_in_regions
 
-    def transfer_solution_to_spat_mesh(self):
-        self.spat_mesh.potential.data[1:-1, 1:-1, 1:-1] = self.phi_vec.reshape(self.spat_mesh.n_nodes - 2, order='F')
+    def transfer_solution_to_spat_mesh(self, potential):
+        potential.data[1:-1, 1:-1, 1:-1] = self.phi_vec.reshape(self.mesh.n_nodes - 2, order='F')
 
     @staticmethod
     def double_index(n_nodes):

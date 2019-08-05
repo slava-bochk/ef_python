@@ -60,7 +60,8 @@ class Simulation(SerializableH5):
         self.generate_valid_particles(initial)
         if self.particle_interaction_model == Model.PIC:
             self.eval_charge_density()
-            field_solver.eval_potential_and_field()
+            field_solver.eval_potential(self.spat_mesh.charge_density, self.spat_mesh.potential)
+            self.spat_mesh.eval_field_from_potential()
         self.shift_new_particles_velocities_half_time_step_back()
         self.consolidate_particle_arrays()
 
