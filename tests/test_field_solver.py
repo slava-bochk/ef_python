@@ -2,10 +2,12 @@ import numpy as np
 from numpy.testing import assert_array_equal, assert_allclose
 from scipy.sparse import csr_matrix
 
-from ef.config.components import BoundaryConditionsConf, SpatialMeshConf
+from ef.config.components import BoundaryConditionsConf
 from ef.config.components import Box
 from ef.field.solvers.pyamg import FieldSolverPyamg as FieldSolver
 from ef.inner_region import InnerRegion
+from ef.meshgrid import MeshGrid
+from ef.util.array_on_grid import ArrayOnGrid
 
 
 class TestFieldSolver:
@@ -25,65 +27,66 @@ class TestFieldSolver:
                                                                            (5, 2, 3, 1)])
 
     def test_generate_nodes_in_regions(self):
-        mesh = SpatialMeshConf((4, 6, 9), (1, 2, 3)).make(BoundaryConditionsConf())
-        solver = FieldSolver(mesh.mesh, [])
+        mesh = MeshGrid.from_step((4, 6, 9), (1, 2, 3))
+        solver = FieldSolver(mesh, [])
         inner_regions = [InnerRegion('test', Box((1, 2, 3), (1, 2, 3)), 3)]
         nodes, potential = solver.generate_nodes_in_regions(inner_regions)
         assert_array_equal(nodes, [0, 1, 3, 4, 6, 7, 9, 10])
         assert_array_equal(potential, [3, 3, 3, 3, 3, 3, 3, 3])
 
     def test_init_rhs(self):
-        mesh = SpatialMeshConf((4, 3, 3)).make(BoundaryConditionsConf())
-        solver = FieldSolver(mesh.mesh, [])
-        solver.init_rhs_vector_in_full_domain(mesh.charge_density, mesh.potential)
+        mesh = MeshGrid.from_step((4, 3, 3), 1)
+        solver = FieldSolver(mesh, [])
+        solver.init_rhs_vector_in_full_domain(ArrayOnGrid(mesh), ArrayOnGrid(mesh))
         assert_array_equal(solver.rhs, np.zeros(3 * 2 * 2))
-        del solver
-
-        mesh = SpatialMeshConf((4, 3, 3)).make(BoundaryConditionsConf(-2))
-        solver = FieldSolver(mesh.mesh, [])
-        solver.init_rhs_vector_in_full_domain(mesh.charge_density, mesh.potential)
+        pot = ArrayOnGrid(mesh)
+        pot.apply_boundary_values(BoundaryConditionsConf(-2))
+        solver.init_rhs_vector_in_full_domain(ArrayOnGrid(mesh), pot)
         assert_array_equal(solver.rhs, [6, 4, 6, 6, 4, 6, 6, 4, 6, 6, 4, 6])  # what
         del solver
 
-        mesh = SpatialMeshConf((4, 4, 5)).make(BoundaryConditionsConf(-2))
-        solver = FieldSolver(mesh.mesh, [])
-        solver.init_rhs_vector_in_full_domain(mesh.charge_density, mesh.potential)
+        mesh = MeshGrid.from_step((4, 4, 5), 1)
+        pot = ArrayOnGrid(mesh)
+        pot.apply_boundary_values(BoundaryConditionsConf(-2))
+        solver = FieldSolver(mesh, [])
+        solver.init_rhs_vector_in_full_domain(ArrayOnGrid(mesh), pot)
         assert_array_equal(solver.rhs, [6, 4, 6, 4, 2, 4, 6, 4, 6,
                                         4, 2, 4, 2, 0, 2, 4, 2, 4,
                                         4, 2, 4, 2, 0, 2, 4, 2, 4,
                                         6, 4, 6, 4, 2, 4, 6, 4, 6])  # what
         del solver
 
-        mesh = SpatialMeshConf((8, 12, 5), (2, 3, 1)).make(BoundaryConditionsConf(-1))
-        solver = FieldSolver(mesh.mesh, [])
-        solver.init_rhs_vector_in_full_domain(mesh.charge_density, mesh.potential)
+        mesh = MeshGrid.from_step((8, 12, 5), (2, 3, 1))
+        pot = ArrayOnGrid(mesh)
+        pot.apply_boundary_values(BoundaryConditionsConf(-1))
+        solver = FieldSolver(mesh, [])
+        solver.init_rhs_vector_in_full_domain(ArrayOnGrid(mesh), pot)
         assert_array_equal(solver.rhs, [49, 40, 49, 45, 36, 45, 49, 40, 49,
                                         13, 4, 13, 9, 0, 9, 13, 4, 13,
                                         13, 4, 13, 9, 0, 9, 13, 4, 13,
                                         49, 40, 49, 45, 36, 45, 49, 40, 49])
         del solver
 
-        mesh = SpatialMeshConf((4, 6, 9), (1, 2, 3)).make(BoundaryConditionsConf())
-        solver = FieldSolver(mesh.mesh, [])
-        mesh.charge_density.data = np.array([[[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
-                                             [[0, 0, 0, 0], [0, 1, 2, 0], [0, -1, 0, 0], [0, 0, 0, 0]],
-                                             [[0, 0, 0, 0], [0, 3, 4, 0], [0, 0, -1, 0], [0, 0, 0, 0]],
-                                             [[0, 0, 0, 0], [0, 5, 6, 0], [0, -1, 0, 0], [0, 0, 0, 0]],
-                                             [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]])
-        solver.init_rhs_vector_in_full_domain(mesh.charge_density, mesh.potential)
+        mesh = MeshGrid.from_step((4, 6, 9), (1, 2, 3))
+        charge = ArrayOnGrid(mesh)
+        charge.data = np.array([[[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+                                [[0, 0, 0, 0], [0, 1, 2, 0], [0, -1, 0, 0], [0, 0, 0, 0]],
+                                [[0, 0, 0, 0], [0, 3, 4, 0], [0, 0, -1, 0], [0, 0, 0, 0]],
+                                [[0, 0, 0, 0], [0, 5, 6, 0], [0, -1, 0, 0], [0, 0, 0, 0]],
+                                [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]])
+        solver = FieldSolver(mesh, [])
+        solver.init_rhs_vector_in_full_domain(charge, ArrayOnGrid(mesh))
         assert_allclose(solver.rhs, -np.array([1, 3, 5, -1, 0, -1, 2, 4, 6, 0, -1, 0]) * np.pi * 4 * 36)
-        del solver
 
-        mesh = SpatialMeshConf((4, 6, 9), (1, 2, 3)).make(BoundaryConditionsConf())
-        solver = FieldSolver(mesh.mesh, [])
+        solver = FieldSolver(mesh, [])
         nodep = solver.generate_nodes_in_regions([InnerRegion('test', Box((1, 2, 3), (1, 2, 3)), 3)])
         solver.nodes_in_regions, solver.potential_in_regions = nodep
-        solver.init_rhs_vector(mesh.charge_density, mesh.potential)
+        solver.init_rhs_vector(ArrayOnGrid(mesh), ArrayOnGrid(mesh))
         assert_array_equal(solver.rhs, [3, 3, 0, 3, 3, 0, 3, 3, 0, 3, 3, 0])
 
     def test_zero_nondiag_inside_objects(self):
-        mesh = SpatialMeshConf((4, 6, 9), (1, 2, 3)).make(BoundaryConditionsConf())
-        solver = FieldSolver(mesh.mesh, [InnerRegion('test', Box((1, 2, 3), (1, 2, 3)), 3)])
+        mesh = MeshGrid.from_step((4, 6, 9), (1, 2, 3))
+        solver = FieldSolver(mesh, [InnerRegion('test', Box((1, 2, 3), (1, 2, 3)), 3)])
 
         a = csr_matrix(np.full((12, 12), 2))
         assert_array_equal(a.toarray(), [[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
@@ -206,8 +209,8 @@ class TestFieldSolver:
                                [0, 0, 0, 0, 0, -2]])
 
     def test_construct_equation_matrix(self):
-        mesh = SpatialMeshConf((4, 6, 9), (1, 2, 3)).make(BoundaryConditionsConf())
-        solver = FieldSolver(mesh.mesh, [])
+        mesh = MeshGrid.from_step((4, 6, 9), (1, 2, 3))
+        solver = FieldSolver(mesh, [])
         solver.construct_equation_matrix()
         d = -2 * (2 * 2 * 3 * 3 + 3 * 3 + 2 * 2)
         x = 2 * 2 * 3 * 3
@@ -227,15 +230,16 @@ class TestFieldSolver:
                                                 [0, 0, 0, 0, 0, z, 0, 0, y, 0, x, d]])
 
     def test_transfer_solution_to_spat_mesh(self):
-        mesh = SpatialMeshConf((4, 6, 9), (1, 2, 3)).make(BoundaryConditionsConf())
-        solver = FieldSolver(mesh.mesh, [])
+        mesh = MeshGrid.from_step((4, 6, 9), (1, 2, 3))
+        solver = FieldSolver(mesh, [])
         solver.phi_vec = np.array(range(1, 3 * 2 * 2 + 1))
-        solver.transfer_solution_to_spat_mesh(mesh.potential)
-        assert_array_equal(mesh.potential.data[1:-1, 1:-1, 1:-1], [[[1, 7], [4, 10]],
-                                                                   [[2, 8], [5, 11]],
-                                                                   [[3, 9], [6, 12]]])
+        potential = ArrayOnGrid(mesh)
+        solver.transfer_solution_to_spat_mesh(potential)
+        assert_array_equal(potential.data[1:-1, 1:-1, 1:-1], [[[1, 7], [4, 10]],
+                                                              [[2, 8], [5, 11]],
+                                                              [[3, 9], [6, 12]]])
 
-        assert_array_equal(mesh.potential.data, [
+        assert_array_equal(potential.data, [
             [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
             [[0, 0, 0, 0], [0, 1, 7, 0], [0, 4, 10, 0], [0, 0, 0, 0]],
             [[0, 0, 0, 0], [0, 2, 8, 0], [0, 5, 11, 0], [0, 0, 0, 0]],
