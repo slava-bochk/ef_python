@@ -83,3 +83,11 @@ class ArrayOnGrid(SerializableH5):
         r3 = range(3)
         slices = [tuple(x if i == j else slice(None) for j in r3) for i in r3 for x in (0, -1)]
         return all(np.all(self.data[s] == x0) for s in slices)
+
+    def apply_boundary_values(self, boundary_conditions):
+        self.data[:, 0, :] = boundary_conditions.bottom
+        self.data[:, -1, :] = boundary_conditions.top
+        self.data[0, :, :] = boundary_conditions.right
+        self.data[-1, :, :] = boundary_conditions.left
+        self.data[:, :, 0] = boundary_conditions.near
+        self.data[:, :, -1] = boundary_conditions.far

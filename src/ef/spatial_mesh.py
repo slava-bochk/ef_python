@@ -46,12 +46,7 @@ class SpatialMesh(SerializableH5):
                             f"to fit in a round number of cells.")
         charge_density = ArrayOnGrid(grid)
         potential = ArrayOnGrid(grid)
-        potential.data[:, 0, :] = boundary_conditions.bottom
-        potential.data[:, -1, :] = boundary_conditions.top
-        potential.data[0, :, :] = boundary_conditions.right
-        potential.data[-1, :, :] = boundary_conditions.left
-        potential.data[:, :, 0] = boundary_conditions.near
-        potential.data[:, :, -1] = boundary_conditions.far
+        potential.apply_boundary_values(boundary_conditions)
         electric_field = ArrayOnGrid(grid, 3)
         return cls(grid, charge_density, potential, electric_field)
 
