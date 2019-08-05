@@ -76,3 +76,10 @@ class ArrayOnGrid(SerializableH5):
         if self.value_shape != ():
             raise ValueError("Trying got compute gradient for a non-scalar field: ambiguous")
         return ArrayOnGrid(self.grid, 3, -np.stack(np.gradient(self.data, *self.grid.cell), -1))
+
+    @property
+    def is_the_same_on_all_boundaries(self):
+        x0 = self.data[0, 0, 0]
+        r3 = range(3)
+        slices = [tuple(x if i == j else slice(None) for j in r3) for i in r3 for x in (0, -1)]
+        return all(np.all(self.data[s] == x0) for s in slices)

@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import List
 
 import numpy as np
 
@@ -8,17 +9,19 @@ from ef.field.particles import FieldParticles
 from ef.inner_region import InnerRegion
 from ef.particle_array import ParticleArray
 from ef.particle_interaction_model import Model
+from ef.spatial_mesh import SpatialMesh
+from ef.util.array_on_grid import ArrayOnGrid
 from ef.util.serializable_h5 import SerializableH5
 
 
-def is_trivial(spat_mesh, inner_regions):
-    if not spat_mesh.is_potential_equal_on_boundaries():
+def is_trivial(potential: ArrayOnGrid, inner_regions: List[InnerRegion]):
+    if not potential.is_the_same_on_all_boundaries:
         return False
-    return len({spat_mesh.potential.data[0, 0, 0]} | {ir.potential for ir in inner_regions}) == 1
+    return len({potential.data[0, 0, 0]} | {ir.potential for ir in inner_regions}) == 1
 
 
 class Simulation(SerializableH5):
-    def __init__(self, time_grid, spat_mesh, inner_regions,
+    def __init__(self, time_grid, spat_mesh: SpatialMesh, inner_regions: List[InnerRegion],
                  particle_sources,
                  electric_fields, magnetic_fields, particle_interaction_model,
                  max_id=-1, particle_arrays=()):
@@ -35,10 +38,10 @@ class Simulation(SerializableH5):
 
         if self.particle_interaction_model == Model.binary:
             self._dynamic_field = FieldParticles('binary_particle_field', self.particle_arrays)
-            if not is_trivial(spat_mesh, inner_regions):
+            if not is_trivial(spat_mesh.potential, inner_regions):
                 self._dynamic_field += self.spat_mesh
         elif self.particle_interaction_model == Model.noninteracting:
-            if not is_trivial(spat_mesh, inner_regions):
+            if not is_trivial(spat_mesh.potential, inner_regions):
                 self._dynamic_field = self.spat_mesh
             else:
                 self._dynamic_field = FieldZero('Uniform_potential_zero_field', 'electric')

@@ -81,12 +81,6 @@ class SpatialMesh(SerializableH5):
     def clear_old_density_values(self):
         self.charge_density.reset()
 
-    def is_potential_equal_on_boundaries(self):
-        p = self.potential.data[0, 0, 0]
-        return np.all(self.potential.data[0] == p) and np.all(self.potential.data[-1] == p) and \
-               np.all(self.potential.data[:, 0] == p) and np.all(self.potential.data[:, -1] == p) and \
-               np.all(self.potential.data[:, :, 0] == p) and np.all(self.potential.data[:, :, -1] == p)
-
     def eval_field_from_potential(self):
         self.electric_field = self.potential.gradient()
 

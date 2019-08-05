@@ -106,3 +106,28 @@ class TestArrayOnGrid:
         assert field == expected
         with raises(ValueError, match="Trying got compute gradient for a non-scalar field: ambiguous"):
             field.gradient()
+
+    def test_is_the_same_on_all_boundaries(self):
+        mesh = MeshGrid(12, (4, 4, 3))
+        a = ArrayOnGrid(mesh)
+        assert a.is_the_same_on_all_boundaries
+        for x, y, z in np.ndindex(4, 4, 3):
+            a.data[x, y, z] = 2.
+            if 0 < x < 3 and 0 < y < 3 and 0 < z < 2:
+                assert a.is_the_same_on_all_boundaries
+            else:
+                assert not a.is_the_same_on_all_boundaries
+            a.reset()
+            assert a.is_the_same_on_all_boundaries
+
+        a = ArrayOnGrid(mesh, 3)
+        assert a.is_the_same_on_all_boundaries
+        for x, y, z, t in np.ndindex(4, 4, 3, 3):
+            a.data[x, y, z, t] = 2.
+            if 0 < x < 3 and 0 < y < 3 and 0 < z < 2:
+                assert a.is_the_same_on_all_boundaries
+            else:
+                assert not a.is_the_same_on_all_boundaries
+            a.reset()
+            assert a.is_the_same_on_all_boundaries
+
