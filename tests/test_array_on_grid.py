@@ -90,3 +90,19 @@ class TestArrayOnGrid:
                            [(-1.25, 0.375, 0),
                             (100, 100, 100),
                             (49.375, 50.1875, 50)])
+
+    def test_gradient(self):
+        m = MeshGrid((1.5, 2, 1), (4, 3, 2))
+        potential = ArrayOnGrid(m)
+        potential.data = np.stack([np.array([[0., 0, 0],
+                                             [1, 2, 3],
+                                             [4, 3, 2],
+                                             [4, 4, 4]]), np.zeros((4, 3))], -1)
+        expected = ArrayOnGrid(m, 3, [[[[-2, 0, 0], [0, 0, 0]], [[-4, 0, 0], [0, 0, 0]], [[-6, 0, 0], [0, 0, 0]]],
+                                      [[[-4, -1, 1], [0, 0, 1]], [[-3, -1, 2], [0, 0, 2]], [[-2, -1, 3], [0, 0, 3]]],
+                                      [[[-3, 1, 4], [0, 0, 4]], [[-2, 1, 3], [0, 0, 3]], [[-1, 1, 2], [0, 0, 2]]],
+                                      [[[0, 0, 4], [0, 0, 4]], [[-2, 0, 4], [0, 0, 4]], [[-4, 0, 4], [0, 0, 4]]]])
+        field = potential.gradient()
+        assert field == expected
+        with raises(ValueError, match="Trying got compute gradient for a non-scalar field: ambiguous"):
+            field.gradient()

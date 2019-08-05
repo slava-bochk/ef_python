@@ -71,3 +71,8 @@ class ArrayOnGrid(SerializableH5):
         xyz = tuple(np.linspace(o[i], o[i] + s[i], self.grid.n_nodes[i]) for i in (0, 1, 2))
         interpolator = RegularGridInterpolator(xyz, self.data, bounds_error=False, fill_value=0)
         return interpolator(positions)
+
+    def gradient(self):
+        if self.value_shape != ():
+            raise ValueError("Trying got compute gradient for a non-scalar field: ambiguous")
+        return ArrayOnGrid(self.grid, 3, -np.stack(np.gradient(self.data, *self.grid.cell), -1))

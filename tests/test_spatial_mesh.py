@@ -98,15 +98,3 @@ class TestDefaultSpatialMesh:
         assert d["potential"] == ArrayOnGrid(mesh)
         assert d["charge_density"] == ArrayOnGrid(mesh)
 
-    def test_eval_field_from_potential(self):
-        mesh = SpatialMeshConf((1.5, 2, 1), (0.5, 1, 1)).make(BoundaryConditionsConf())
-        mesh.potential.data = np.stack([np.array([[0., 0, 0],
-                                             [1, 2, 3],
-                                             [4, 3, 2],
-                                             [4, 4, 4]]), np.zeros((4, 3))], -1)
-        mesh.eval_field_from_potential()
-        expected = np.array([[[[-2, 0, 0], [0, 0, 0]], [[-4, 0, 0], [0, 0, 0]], [[-6, 0, 0], [0, 0, 0]]],
-                             [[[-4, -1, 1], [0, 0, 1]], [[-3, -1, 2], [0, 0, 2]], [[-2, -1, 3], [0, 0, 3]]],
-                             [[[-3, 1, 4], [0, 0, 4]], [[-2, 1, 3], [0, 0, 3]], [[-1, 1, 2], [0, 0, 2]]],
-                             [[[0, 0, 4], [0, 0, 4]], [[-2, 0, 4], [0, 0, 4]], [[-4, 0, 4], [0, 0, 4]]]])
-        assert_array_equal(mesh.electric_field.data, expected)
