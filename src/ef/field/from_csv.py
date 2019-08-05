@@ -4,6 +4,7 @@ import numpy as np
 
 from ef.field.on_grid import FieldOnGrid
 from ef.meshgrid import MeshGrid
+from ef.util.array_on_grid import ArrayOnGrid
 
 
 class FieldFromCSVFile(FieldOnGrid):
@@ -26,5 +27,5 @@ class FieldFromCSVFile(FieldOnGrid):
         step = np.min(dist[dist > 0], axis=0)
         grid = MeshGrid.from_step(size, step, origin)
         field = raw[:, 3:].reshape((*grid.n_nodes, 3))
-        super().__init__(name, electric_or_magnetic, grid, field)
+        super().__init__(name, electric_or_magnetic, ArrayOnGrid(grid, 3, field))
         self.field_filename = field_filename

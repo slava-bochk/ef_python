@@ -8,6 +8,7 @@ from ef.field.from_csv import FieldFromCSVFile
 from ef.field.on_grid import FieldOnGrid
 from ef.field.uniform import FieldUniform
 from ef.meshgrid import MeshGrid
+from ef.util.array_on_grid import ArrayOnGrid
 
 
 class TestFields:
@@ -70,12 +71,10 @@ class TestFields:
         assert_array_equal(f.get_at_points((3, 2, 1), 5.), (4, 5, 5))
 
     def test_on_grid(self):
-        f = FieldOnGrid('f1', 'electric', MeshGrid(10, 11))
-        assert f == FieldOnGrid('f1', 'electric', MeshGrid(10, 11), np.zeros((11, 11, 11, 3)))
-        f = FieldOnGrid('f1', 'electric', MeshGrid(5, 6), np.full((6, 6, 6, 3), -3.14))
+        f = FieldOnGrid('f1', 'electric', ArrayOnGrid(MeshGrid(5, 6), 3, np.full((6, 6, 6, 3), -3.14)))
         assert_array_equal(f.get_at_points([(-1, 0, 0), (1, 2, 3.5)], 1), [(0, 0, 0), (-3.14, -3.14, -3.14)])
-        with raises(ValueError, match="Unexpected raw data array shape: \(3,\) for this ArrayOnGrid shape: \(6, 6, 6, 3\)"):
-            FieldOnGrid('f1', 'electric', MeshGrid(5, 6), np.full(3, 3.14))
+        with raises(ValueError):
+            FieldOnGrid('f1', 'electric', ArrayOnGrid(MeshGrid(5, 6)))
 
     def test_from_file(self):
         f = FieldFromCSVFile('f1', 'electric', 'tests/test_field.csv')
