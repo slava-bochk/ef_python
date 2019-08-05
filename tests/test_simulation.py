@@ -76,20 +76,6 @@ class TestSimulation:
         assert sim.magnetic_fields == FieldExpression('y', 'magnetic', '0', '0', '3*x + sqrt(y) - z**2')
         assert sim.particle_interaction_model == Model.binary
 
-    def test_binary_field(self):
-        d = Config().make()
-        d.particle_arrays = [ParticleArray(1, -1, 1, [(1, 2, 3)], [(-2, 2, 0)], False)]
-        assert_array_almost_equal(d.binary_electric_field_at_positions((1, 2, 3)), [(0, 0, 0)])
-        assert_array_almost_equal(d.binary_electric_field_at_positions((1, 2, 4)), [(0, 0, -1)])
-        assert_array_almost_equal(d.binary_electric_field_at_positions((0, 2, 3)), [(1, 0, 0)])
-        assert_array_almost_equal(d.binary_electric_field_at_positions((0, 1, 2)),
-                                  [(1 / sqrt(27), 1 / sqrt(27), 1 / sqrt(27))])
-        d.particle_arrays = [ParticleArray(2, -1, 1, [(1, 2, 3), (1, 2, 3)], [(-2, 2, 0), (0, 0, 0)], False),
-                             ParticleArray(2, -1, 1, [(1, 2, 3), (1, 2, 3)], [(-2, 2, 0), (0, 0, 0)], False)]
-        assert_array_almost_equal(d.binary_electric_field_at_positions(
-            [(1, 2, 3), (1, 2, 4), (0, 2, 3), (0, 1, 2)]),
-            [(0, 0, 0), (0, 0, -4), (4, 0, 0), (4 / sqrt(27), 4 / sqrt(27), 4 / sqrt(27))])
-
     @pytest.mark.parametrize('model', ['noninteracting', 'PIC', 'binary'])
     def test_cube_of_gas(self, model):
         sim = Config(TimeGridConf(1.0, save_step=.5, step=.1), SpatialMeshConf((10, 10, 10), (1, 1, 1)),

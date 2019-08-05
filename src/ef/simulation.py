@@ -59,7 +59,7 @@ class Simulation(SerializableH5):
     def advance_one_time_step(self, field_solver):
         self.push_particles()
         self.generate_and_prepare_particles(field_solver)
-        self.update_time_grid()
+        self.time_grid.update_to_next_step()
 
     def eval_charge_density(self):
         self.charge_density.reset()
@@ -112,10 +112,6 @@ class Simulation(SerializableH5):
         return total_el_field.get_at_points(positions, self.time_grid.current_time), \
                self.magnetic_fields.get_at_points(positions, self.time_grid.current_time)
 
-    def binary_electric_field_at_positions(self, positions):
-        return sum(
-            np.nan_to_num(p.field_at_points(positions)) for p in self.particle_arrays)
-
     def shift_new_particles_velocities_half_time_step_back(self):
         minus_half_dt = -1.0 * self.time_grid.time_step_size / 2.0
         self.prepare_boris_integration(minus_half_dt)
@@ -142,9 +138,6 @@ class Simulation(SerializableH5):
         range_of_ids = range(self.max_id + 1, self.max_id + num_of_particles + 1)
         self.max_id += num_of_particles
         return np.array(range_of_ids)
-
-    def update_time_grid(self):
-        self.time_grid.update_to_next_step()
 
     def consolidate_particle_arrays(self):
         particles_by_type = defaultdict(list)
