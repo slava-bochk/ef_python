@@ -57,20 +57,3 @@ class SpatialMesh(SerializableH5):
 
     def get_at_points(self, positions, time):
         return self.electric_field.interpolate_at_positions(positions)
-
-    @classmethod
-    def import_h5(cls, g):
-        mesh = MeshGrid.import_h5(g)
-        charge = ArrayOnGrid(mesh, (), np.reshape(g['charge_density'], mesh.n_nodes))
-        potential = ArrayOnGrid(mesh, (), np.reshape(g['potential'], mesh.n_nodes))
-        field = ArrayOnGrid(mesh, 3, np.moveaxis(
-            np.array([np.reshape(g['electric_field_{}'.format(c)], mesh.n_nodes) for c in 'xyz']),
-            0, -1))
-        return cls(mesh, charge, potential, field)
-
-    def export_h5(self, g):
-        self.mesh.export_h5(g)
-        for i, c in enumerate('xyz'):
-            g['electric_field_{}'.format(c)] = self.electric_field.data[..., i].flatten()
-        g['charge_density'] = self.charge_density.data.flatten()
-        g['potential'] = self.potential.data.flatten()

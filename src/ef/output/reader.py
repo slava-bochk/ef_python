@@ -2,12 +2,14 @@ import numpy as np
 
 from ef.field import Field
 from ef.inner_region import InnerRegion
+from ef.meshgrid import MeshGrid
 from ef.particle_array import ParticleArray
 from ef.particle_interaction_model import Model
 from ef.particle_source import ParticleSource
 from ef.simulation import Simulation
 from ef.spatial_mesh import SpatialMesh
 from ef.time_grid import TimeGrid
+from ef.util.array_on_grid import ArrayOnGrid
 
 
 class Reader:
@@ -40,9 +42,17 @@ class Reader:
         sources = [ParticleSource.import_h5(g) for g in h5file['ParticleSources'].values()]
         particles = [ParticleArray.import_h5(g) for g in h5file['ParticleSources'].values()]
         max_id = int(np.max([p.ids for p in particles], initial=-1))
+        g = h5file['SpatialMesh']
+        mesh = MeshGrid.import_h5(g)
+        charge = ArrayOnGrid(mesh, (), np.reshape(g['charge_density'], mesh.n_nodes))
+        potential = ArrayOnGrid(mesh, (), np.reshape(g['potential'], mesh.n_nodes))
+        field = ArrayOnGrid(mesh, 3, np.moveaxis(
+            np.array([np.reshape(g['electric_field_{}'.format(c)], mesh.n_nodes) for c in 'xyz']),
+            0, -1))
+        spat_mesh = SpatialMesh(mesh, charge, potential, field)
         return Simulation(
             time_grid=TimeGrid.import_h5(h5file['TimeGrid']),
-            spat_mesh=SpatialMesh.import_h5(h5file['SpatialMesh']),
+            spat_mesh=spat_mesh,
             inner_regions=[InnerRegion.import_h5(g) for g in h5file['InnerRegions'].values()],
             electric_fields=[f for f in fields if f.electric_or_magnetic == 'electric'],
             magnetic_fields=[f for f in fields if f.electric_or_magnetic == 'magnetic'],
