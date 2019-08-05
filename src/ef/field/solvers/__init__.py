@@ -92,21 +92,21 @@ class FieldSolver:
 
     def init_rhs_vector_in_full_domain(self):
         m = self.spat_mesh
-        rhs = -4 * np.pi * m.cell.prod() ** 2 * m.charge_density[1:-1, 1:-1, 1:-1]
+        rhs = -4 * np.pi * m.cell.prod() ** 2 * m.charge_density.data[1:-1, 1:-1, 1:-1]
         dx, dy, dz = m.cell
-        rhs[0] -= dy * dy * dz * dz * m.potential[0, 1:-1, 1:-1]
-        rhs[-1] -= dy * dy * dz * dz * m.potential[-1, 1:-1, 1:-1]
-        rhs[:, 0] -= dx * dx * dz * dz * m.potential[1:-1, 0, 1:-1]
-        rhs[:, -1] -= dx * dx * dz * dz * m.potential[1:-1, -1, 1:-1]
-        rhs[:, :, 0] -= dx * dx * dy * dy * m.potential[1:-1, 1:-1, 0]
-        rhs[:, :, -1] -= dx * dx * dy * dy * m.potential[1:-1, 1:-1, -1]
+        rhs[0] -= dy * dy * dz * dz * m.potential.data[0, 1:-1, 1:-1]
+        rhs[-1] -= dy * dy * dz * dz * m.potential.data[-1, 1:-1, 1:-1]
+        rhs[:, 0] -= dx * dx * dz * dz * m.potential.data[1:-1, 0, 1:-1]
+        rhs[:, -1] -= dx * dx * dz * dz * m.potential.data[1:-1, -1, 1:-1]
+        rhs[:, :, 0] -= dx * dx * dy * dy * m.potential.data[1:-1, 1:-1, 0]
+        rhs[:, :, -1] -= dx * dx * dy * dy * m.potential.data[1:-1, 1:-1, -1]
         self.rhs = rhs.ravel('F')
 
     def set_rhs_for_nodes_inside_objects(self):
         self.rhs[self.nodes_in_regions] = self.potential_in_regions
 
     def transfer_solution_to_spat_mesh(self):
-        self.spat_mesh.potential[1:-1, 1:-1, 1:-1] = self.phi_vec.reshape(self.spat_mesh.n_nodes - 2, order='F')
+        self.spat_mesh.potential.data[1:-1, 1:-1, 1:-1] = self.phi_vec.reshape(self.spat_mesh.n_nodes - 2, order='F')
 
     @staticmethod
     def double_index(n_nodes):

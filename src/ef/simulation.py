@@ -12,7 +12,7 @@ from ef.util.serializable_h5 import SerializableH5
 def is_trivial(spat_mesh, inner_regions):
     if not spat_mesh.is_potential_equal_on_boundaries():
         return False
-    return len({spat_mesh.potential[0, 0, 0]} | {ir.potential for ir in inner_regions}) == 1
+    return len({spat_mesh.potential.data[0, 0, 0]} | {ir.potential for ir in inner_regions}) == 1
 
 
 class Simulation(SerializableH5):

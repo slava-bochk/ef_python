@@ -3,6 +3,7 @@ import logging
 import numpy as np
 
 from ef.meshgrid import MeshGrid
+from ef.util.array_on_grid import ArrayOnGrid
 from ef.util.serializable_h5 import SerializableH5
 
 
@@ -59,35 +60,35 @@ class SpatialMesh(SerializableH5):
             logging.warning(f"{('X', 'Y', 'Z')[i]} step on spatial grid was reduced to "
                             f"{grid.cell[i]:.3f} from {step_size[i]:.3f} "
                             f"to fit in a round number of cells.")
-        charge_density = np.zeros(grid.n_nodes, dtype='f8')
-        potential = np.zeros(grid.n_nodes, dtype='f8')
-        potential[:, 0, :] = boundary_conditions.bottom
-        potential[:, -1, :] = boundary_conditions.top
-        potential[0, :, :] = boundary_conditions.right
-        potential[-1, :, :] = boundary_conditions.left
-        potential[:, :, 0] = boundary_conditions.near
-        potential[:, :, -1] = boundary_conditions.far
-        electric_field = np.zeros(list(grid.n_nodes) + [3], dtype='f8')
+        charge_density = ArrayOnGrid(grid)
+        potential = ArrayOnGrid(grid)
+        potential.data[:, 0, :] = boundary_conditions.bottom
+        potential.data[:, -1, :] = boundary_conditions.top
+        potential.data[0, :, :] = boundary_conditions.right
+        potential.data[-1, :, :] = boundary_conditions.left
+        potential.data[:, :, 0] = boundary_conditions.near
+        potential.data[:, :, -1] = boundary_conditions.far
+        electric_field = ArrayOnGrid(grid, 3)
         return cls(grid, charge_density, potential, electric_field)
 
     def weight_particles_charge_to_mesh(self, particle_arrays):
         for p in particle_arrays:
-            self.charge_density += self.mesh.distribute_scalar_at_positions(p.charge, p.positions)
+            self.charge_density.distribute_at_positions(p.charge, p.positions)
 
     def get_at_points(self, positions, time):
-        return self.mesh.interpolate_field_at_positions(self.electric_field, positions)
+        return self.electric_field.interpolate_at_positions(positions)
 
     def clear_old_density_values(self):
-        self.charge_density.fill(0)
+        self.charge_density.reset()
 
     def is_potential_equal_on_boundaries(self):
-        p = self.potential[0, 0, 0]
-        return np.all(self.potential[0] == p) and np.all(self.potential[-1] == p) and \
-               np.all(self.potential[:, 0] == p) and np.all(self.potential[:, -1] == p) and \
-               np.all(self.potential[:, :, 0] == p) and np.all(self.potential[:, :, -1] == p)
+        p = self.potential.data[0, 0, 0]
+        return np.all(self.potential.data[0] == p) and np.all(self.potential.data[-1] == p) and \
+               np.all(self.potential.data[:, 0] == p) and np.all(self.potential.data[:, -1] == p) and \
+               np.all(self.potential.data[:, :, 0] == p) and np.all(self.potential.data[:, :, -1] == p)
 
     def eval_field_from_potential(self):
-        self.electric_field = -np.stack(np.gradient(self.potential, *self.cell), -1)
+        self.electric_field = ArrayOnGrid(self.mesh, 3, -np.stack(np.gradient(self.potential.data, *self.cell), -1))
 
     @classmethod
     def import_h5(cls, g):
@@ -99,7 +100,8 @@ class SpatialMesh(SerializableH5):
         field = np.moveaxis(
             np.array([np.reshape(g['electric_field_{}'.format(c)], n_nodes) for c in 'xyz']),
             0, -1)
-        return cls(MeshGrid(size, n_nodes), charge, potential, field)
+        g = MeshGrid(size, n_nodes)
+        return cls(g, ArrayOnGrid(g, (), charge), ArrayOnGrid(g, (), potential), ArrayOnGrid(g, 3, field))
 
     def export_h5(self, g):
         for i, c in enumerate('xyz'):
@@ -107,6 +109,6 @@ class SpatialMesh(SerializableH5):
             g.attrs['{}_cell_size'.format(c)] = [self.cell[i]]
             g.attrs['{}_n_nodes'.format(c)] = [self.n_nodes[i]]
             g['node_coordinates_{}'.format(c)] = self.node_coordinates[..., i].flatten()
-            g['electric_field_{}'.format(c)] = self.electric_field[..., i].flatten()
-        g['charge_density'] = self.charge_density.flatten()
-        g['potential'] = self.potential.flatten()
+            g['electric_field_{}'.format(c)] = self.electric_field.data[..., i].flatten()
+        g['charge_density'] = self.charge_density.data.flatten()
+        g['potential'] = self.potential.data.flatten()

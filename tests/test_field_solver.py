@@ -65,11 +65,11 @@ class TestFieldSolver:
 
         mesh = SpatialMeshConf((4, 6, 9), (1, 2, 3)).make(BoundaryConditionsConf())
         solver = FieldSolver(mesh, [])
-        mesh.charge_density = np.array([[[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
-                                        [[0, 0, 0, 0], [0, 1, 2, 0], [0, -1, 0, 0], [0, 0, 0, 0]],
-                                        [[0, 0, 0, 0], [0, 3, 4, 0], [0, 0, -1, 0], [0, 0, 0, 0]],
-                                        [[0, 0, 0, 0], [0, 5, 6, 0], [0, -1, 0, 0], [0, 0, 0, 0]],
-                                        [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]])
+        mesh.charge_density.data = np.array([[[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
+                                             [[0, 0, 0, 0], [0, 1, 2, 0], [0, -1, 0, 0], [0, 0, 0, 0]],
+                                             [[0, 0, 0, 0], [0, 3, 4, 0], [0, 0, -1, 0], [0, 0, 0, 0]],
+                                             [[0, 0, 0, 0], [0, 5, 6, 0], [0, -1, 0, 0], [0, 0, 0, 0]],
+                                             [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]])
         solver.init_rhs_vector_in_full_domain()
         assert_allclose(solver.rhs, -np.array([1, 3, 5, -1, 0, -1, 2, 4, 6, 0, -1, 0]) * np.pi * 4 * 36)
         del solver
@@ -231,11 +231,11 @@ class TestFieldSolver:
         solver = FieldSolver(mesh, [])
         solver.phi_vec = np.array(range(1, 3 * 2 * 2 + 1))
         solver.transfer_solution_to_spat_mesh()
-        assert_array_equal(mesh.potential[1:-1, 1:-1, 1:-1], [[[1, 7], [4, 10]],
-                                                              [[2, 8], [5, 11]],
-                                                              [[3, 9], [6, 12]]])
+        assert_array_equal(mesh.potential.data[1:-1, 1:-1, 1:-1], [[[1, 7], [4, 10]],
+                                                                   [[2, 8], [5, 11]],
+                                                                   [[3, 9], [6, 12]]])
 
-        assert_array_equal(mesh.potential, [
+        assert_array_equal(mesh.potential.data, [
             [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]],
             [[0, 0, 0, 0], [0, 1, 7, 0], [0, 4, 10, 0], [0, 0, 0, 0]],
             [[0, 0, 0, 0], [0, 2, 8, 0], [0, 5, 11, 0], [0, 0, 0, 0]],

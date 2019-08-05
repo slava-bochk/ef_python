@@ -8,32 +8,19 @@ from numpy.testing import assert_array_equal
 from ef.config.components import SpatialMeshConf, BoundaryConditionsConf
 from ef.meshgrid import MeshGrid
 from ef.spatial_mesh import SpatialMesh
+from ef.util.array_on_grid import ArrayOnGrid
 
 
 class TestDefaultSpatialMesh:
     def test_config(self, capsys):
         mesh = SpatialMeshConf((4, 2, 3), (2, 1, 3)).make(BoundaryConditionsConf(3.14))
-        assert mesh.mesh.node_coordinates.shape == (3, 3, 2, 3)
-        assert mesh.charge_density.shape == (3, 3, 2)
-        assert mesh.potential.shape == (3, 3, 2)
-        assert mesh.electric_field.shape == (3, 3, 2, 3)
-        coords = np.array([[[[0., 0., 0.], [0., 0., 3.]], [[0., 1., 0.], [0., 1., 3.]],
-                            [[0., 2., 0.], [0., 2., 3.]]],
-                           [[[2., 0., 0.], [2., 0., 3.]], [[2., 1., 0.], [2., 1., 3.]],
-                            [[2., 2., 0.], [2., 2., 3.]]],
-                           [[[4., 0., 0.], [4., 0., 3.]], [[4., 1., 0.], [4., 1., 3.]],
-                            [[4., 2., 0.], [4., 2., 3.]]]])
-        assert_array_equal(mesh.mesh.node_coordinates, coords)
-        assert_array_equal(mesh.charge_density, np.zeros((3, 3, 2)))
-        potential = np.full((3, 3, 2), 3.14)
-        assert_array_equal(mesh.potential, potential)
-        assert_array_equal(mesh.electric_field, np.zeros((3, 3, 2, 3)))
+        assert mesh == SpatialMesh.do_init((4, 2, 3), (2, 1, 3), BoundaryConditionsConf(3.14))
         out, err = capsys.readouterr()
         assert out == ""
         assert err == ""
 
     def test_do_init_warnings(self, capsys, caplog):
-        mesh = SpatialMesh.do_init((12, 12, 12), (5, 5, 7), BoundaryConditionsConf(0))
+        SpatialMesh.do_init((12, 12, 12), (5, 5, 7), BoundaryConditionsConf(0))
         out, err = capsys.readouterr()
         assert out == ""
         assert err == ""
@@ -48,36 +35,22 @@ class TestDefaultSpatialMesh:
 
     def test_do_init(self):
         mesh = SpatialMesh.do_init((4, 2, 3), (2, 1, 3), BoundaryConditionsConf(3.14))
-        assert mesh.mesh.node_coordinates.shape == (3, 3, 2, 3)
-        assert mesh.charge_density.shape == (3, 3, 2)
-        assert mesh.potential.shape == (3, 3, 2)
-        assert mesh.electric_field.shape == (3, 3, 2, 3)
-        coords = np.array([[[[0., 0., 0.], [0., 0., 3.]], [[0., 1., 0.], [0., 1., 3.]],
-                            [[0., 2., 0.], [0., 2., 3.]]],
-                           [[[2., 0., 0.], [2., 0., 3.]], [[2., 1., 0.], [2., 1., 3.]],
-                            [[2., 2., 0.], [2., 2., 3.]]],
-                           [[[4., 0., 0.], [4., 0., 3.]], [[4., 1., 0.], [4., 1., 3.]],
-                            [[4., 2., 0.], [4., 2., 3.]]]])
-        assert_array_equal(mesh.mesh.node_coordinates, coords)
-        assert_array_equal(mesh.charge_density, np.zeros((3, 3, 2)))
-        potential = np.full((3, 3, 2), 3.14)
-        assert_array_equal(mesh.potential, potential)
-        assert_array_equal(mesh.electric_field, np.zeros((3, 3, 2, 3)))
-
-    def test_do_init_potential(self):
-        mesh = SpatialMesh.do_init((12, 12, 12), (4, 4, 6),
-                                   BoundaryConditionsConf(1, 2, 3, 4, 5, 6))
+        assert mesh.mesh == MeshGrid((4, 2, 3), (3, 3, 2))
+        assert mesh.charge_density == ArrayOnGrid(mesh.mesh)
+        assert mesh.potential == ArrayOnGrid(mesh.mesh, (), np.full((3, 3, 2), 3.14))
+        assert mesh.electric_field == ArrayOnGrid(mesh.mesh, 3)
+        mesh = SpatialMesh.do_init((12, 12, 12), (4, 4, 6), BoundaryConditionsConf(1, 2, 3, 4, 5, 6))
         potential = np.array([[[5., 1., 6.], [5., 1., 6.], [5., 1., 6.], [5., 1., 6.]],
                               [[5., 3., 6.], [5., 0., 6.], [5., 0., 6.], [5., 4., 6.]],
                               [[5., 3., 6.], [5., 0., 6.], [5., 0., 6.], [5., 4., 6.]],
                               [[5., 2., 6.], [5., 2., 6.], [5., 2., 6.], [5., 2., 6.]]])
-        assert_array_equal(mesh.potential, potential)
+        assert mesh.potential == ArrayOnGrid(mesh.mesh, (), potential)
 
     def test_is_potential_equal_on_boundaries(self):
         for x, y, z in np.ndindex(4, 4, 3):
             mesh = SpatialMesh.do_init((12, 12, 12), (4, 4, 6), BoundaryConditionsConf(3.14))
             assert mesh.is_potential_equal_on_boundaries()
-            mesh.potential[x, y, z] = 2.
+            mesh.potential.data[x, y, z] = 2.
             if np.all([x > 0, y > 0, z > 0]) and np.all([x < 3, y < 3, z < 2]):
                 assert mesh.is_potential_equal_on_boundaries()
             else:
@@ -110,50 +83,24 @@ class TestDefaultSpatialMesh:
 
         mesh1 = SpatialMesh.do_init((10, 20, 30), (2, 1, 3), BoundaryConditionsConf(3.14))
         with h5py.File(fname, mode="w") as h5file:
-            mesh1.save_h5(h5file.create_group("/mesh"))
+            mesh1.save_h5(h5file.create_group("/meshgroup"))
         with h5py.File(fname, mode="r") as h5file:
-            mesh2 = SpatialMesh.load_h5(h5file["/mesh"])
-        assert mesh1 == mesh2
-
-        mesh2 = SpatialMesh.do_init((10, 20, 30), (2, 1, 3), BoundaryConditionsConf(3.14))
-        assert mesh1 == mesh2
-        mesh2.potential = np.random.ranf(mesh1.potential.shape)
-        assert mesh1 != mesh2
-
-        mesh2 = SpatialMesh.do_init((10, 20, 30), (2, 1, 3), BoundaryConditionsConf(3.14))
-        assert mesh1 == mesh2
-        mesh2.charge_density = np.random.ranf(mesh1.charge_density.shape)
-        assert mesh1 != mesh2
-
-        mesh2 = SpatialMesh.do_init((10, 20, 30), (2, 1, 3), BoundaryConditionsConf(3.14))
-        assert mesh1 == mesh2
-        mesh2.electric_field = np.random.ranf(mesh1.electric_field.shape)
-        assert mesh1 != mesh2
-
-        mesh2 = SpatialMesh.do_init((10, 20, 30), (2, 1, 3), BoundaryConditionsConf(3.14))
-        mesh2.potential = np.random.ranf(mesh1.potential.shape)
-        mesh2.charge_density = np.random.ranf(mesh1.charge_density.shape)
-        mesh2.electric_field = np.random.ranf(mesh1.electric_field.shape)
-        assert mesh1 != mesh2
-
-        with h5py.File(fname, mode="w") as h5file:
-            mesh2.save_h5(h5file.create_group("/SpatialMesh"))
-        with h5py.File(fname, mode="r") as h5file:
-            mesh1 = SpatialMesh.load_h5(h5file["/SpatialMesh"])
+            mesh2 = SpatialMesh.load_h5(h5file["/meshgroup"])
         assert mesh1 == mesh2
 
     def test_dict(self):
         mesh = SpatialMesh.do_init((4, 2, 3), (2, 1, 3), BoundaryConditionsConf())
         d = mesh.dict
         assert d.keys() == {"mesh", "electric_field", "potential", "charge_density"}
-        assert d["mesh"] == MeshGrid((4, 2, 3), (3, 3, 2))
-        assert_array_equal(d["electric_field"], np.zeros((3, 3, 2, 3)))
-        assert_array_equal(d["potential"], np.zeros((3, 3, 2)))
-        assert_array_equal(d["charge_density"], np.zeros((3, 3, 2)))
+        mesh = MeshGrid((4, 2, 3), (3, 3, 2))
+        assert d["mesh"] == mesh
+        assert d["electric_field"] == ArrayOnGrid(mesh, 3)
+        assert d["potential"] == ArrayOnGrid(mesh)
+        assert d["charge_density"] == ArrayOnGrid(mesh)
 
     def test_eval_field_from_potential(self):
         mesh = SpatialMeshConf((1.5, 2, 1), (0.5, 1, 1)).make(BoundaryConditionsConf())
-        mesh.potential = np.stack([np.array([[0., 0, 0],
+        mesh.potential.data = np.stack([np.array([[0., 0, 0],
                                              [1, 2, 3],
                                              [4, 3, 2],
                                              [4, 4, 4]]), np.zeros((4, 3))], -1)
@@ -162,4 +109,4 @@ class TestDefaultSpatialMesh:
                              [[[-4, -1, 1], [0, 0, 1]], [[-3, -1, 2], [0, 0, 2]], [[-2, -1, 3], [0, 0, 3]]],
                              [[[-3, 1, 4], [0, 0, 4]], [[-2, 1, 3], [0, 0, 3]], [[-1, 1, 2], [0, 0, 2]]],
                              [[[0, 0, 4], [0, 0, 4]], [[-2, 0, 4], [0, 0, 4]], [[-4, 0, 4], [0, 0, 4]]]])
-        assert_array_equal(mesh.electric_field, expected)
+        assert_array_equal(mesh.electric_field.data, expected)
