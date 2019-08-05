@@ -17,22 +17,6 @@ class SpatialMesh(SerializableH5):
         self.potential = potential
         self.electric_field = electric_field
 
-    @property
-    def size(self):
-        return self.mesh.size
-
-    @property
-    def cell(self):
-        return self.mesh.cell
-
-    @property
-    def n_nodes(self):
-        return self.mesh.n_nodes
-
-    @property
-    def node_coordinates(self):
-        return self.mesh.node_coordinates
-
     @classmethod
     def do_init(cls, grid_size, step_size, boundary_conditions):
         try:
@@ -71,18 +55,8 @@ class SpatialMesh(SerializableH5):
         electric_field = ArrayOnGrid(grid, 3)
         return cls(grid, charge_density, potential, electric_field)
 
-    def weight_particles_charge_to_mesh(self, particle_arrays):
-        for p in particle_arrays:
-            self.charge_density.distribute_at_positions(p.charge, p.positions)
-
     def get_at_points(self, positions, time):
         return self.electric_field.interpolate_at_positions(positions)
-
-    def clear_old_density_values(self):
-        self.charge_density.reset()
-
-    def eval_field_from_potential(self):
-        self.electric_field = self.potential.gradient()
 
     @classmethod
     def import_h5(cls, g):

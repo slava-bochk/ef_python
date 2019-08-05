@@ -27,7 +27,7 @@ class Simulation(SerializableH5):
                  max_id=-1, particle_arrays=()):
         self.time_grid = time_grid
         self.spat_mesh = spat_mesh
-        self._domain = InnerRegion('simulation_domain', Box(0, spat_mesh.size), inverted=True)
+        self._domain = InnerRegion('simulation_domain', Box(0, spat_mesh.mesh.size), inverted=True)
         self.inner_regions = inner_regions
         self.particle_sources = particle_sources
         self.electric_fields = FieldSum.factory(electric_fields, 'electric')
@@ -56,8 +56,9 @@ class Simulation(SerializableH5):
         self.update_time_grid()
 
     def eval_charge_density(self):
-        self.spat_mesh.clear_old_density_values()
-        self.spat_mesh.weight_particles_charge_to_mesh(self.particle_arrays)
+        self.spat_mesh.charge_density.reset()
+        for p in self.particle_arrays:
+            self.spat_mesh.charge_density.distribute_at_positions(p.charge, p.positions)
 
     def push_particles(self):
         self.boris_integration(self.time_grid.time_step_size)
@@ -67,7 +68,7 @@ class Simulation(SerializableH5):
         if self.particle_interaction_model == Model.PIC:
             self.eval_charge_density()
             field_solver.eval_potential(self.spat_mesh.charge_density, self.spat_mesh.potential)
-            self.spat_mesh.eval_field_from_potential()
+            self.spat_mesh.electric_field = self.spat_mesh.potential.gradient()
         self.shift_new_particles_velocities_half_time_step_back()
         self.consolidate_particle_arrays()
 
