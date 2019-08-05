@@ -2,8 +2,10 @@ from collections import defaultdict
 
 import numpy as np
 
+from ef.config.components import Box
 from ef.field import FieldZero, FieldSum
 from ef.field.particles import FieldParticles
+from ef.inner_region import InnerRegion
 from ef.particle_array import ParticleArray
 from ef.particle_interaction_model import Model
 from ef.util.serializable_h5 import SerializableH5
@@ -22,6 +24,7 @@ class Simulation(SerializableH5):
                  max_id=-1, particle_arrays=()):
         self.time_grid = time_grid
         self.spat_mesh = spat_mesh
+        self._domain = InnerRegion('simulation_domain', Box(0, spat_mesh.size), inverted=True)
         self.inner_regions = inner_regions
         self.particle_sources = particle_sources
         self.electric_fields = FieldSum.factory(electric_fields, 'electric')
@@ -109,8 +112,7 @@ class Simulation(SerializableH5):
 
     def apply_domain_boundary_conditions(self):
         for arr in self.particle_arrays:
-            collisions = self.out_of_bound(arr)
-            arr.remove(collisions)
+            self._domain.collide_with_particles(arr)
         self.particle_arrays = [a for a in self.particle_arrays if len(a.ids) > 0]
 
     def remove_particles_inside_inner_regions(self):
@@ -118,10 +120,6 @@ class Simulation(SerializableH5):
             for p in self.particle_arrays:
                 region.collide_with_particles(p)
             self.particle_arrays = [a for a in self.particle_arrays if len(a.ids) > 0]
-
-    def out_of_bound(self, particle):
-        return np.logical_or(np.any(particle.positions < 0, axis=-1),
-                             np.any(particle.positions > self.spat_mesh.size, axis=-1))
 
     def generate_new_particles(self, initial=False):
         for src in self.particle_sources:
