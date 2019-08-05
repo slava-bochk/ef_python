@@ -40,6 +40,6 @@ class Runner:
     def eval_and_write_fields_without_particles(self):
         self.simulation.spat_mesh.charge_density.reset()
         self.solver.eval_potential(self.simulation.spat_mesh.charge_density, self.simulation.spat_mesh.potential)
-        self.simulation.spat_mesh.electric_field = self.simulation.spat_mesh.potential.gradient()
+        self.simulation.spat_mesh.electric_field.array = self.simulation.spat_mesh.potential.gradient()
         print("Writing initial fields to file")
         self.output_writer.write(self.simulation, "fieldsWithoutParticles")

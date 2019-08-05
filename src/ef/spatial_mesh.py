@@ -2,15 +2,13 @@ import logging
 
 import numpy as np
 
+from ef.field.on_grid import FieldOnGrid
 from ef.meshgrid import MeshGrid
 from ef.util.array_on_grid import ArrayOnGrid
 from ef.util.serializable_h5 import SerializableH5
 
 
 class SpatialMesh(SerializableH5):
-    electric_or_magnetic = 'electric'
-    name = 'spatial_mesh'
-
     def __init__(self, mesh, charge_density, potential, electric_field):
         self.mesh = mesh
         self.charge_density = charge_density
@@ -23,8 +21,5 @@ class SpatialMesh(SerializableH5):
         charge_density = ArrayOnGrid(grid)
         potential = ArrayOnGrid(grid)
         potential.apply_boundary_values(boundary_conditions)
-        electric_field = ArrayOnGrid(grid, 3)
+        electric_field = FieldOnGrid('spatial_mesh', 'electric', ArrayOnGrid(grid, 3))
         return cls(grid, charge_density, potential, electric_field)
-
-    def get_at_points(self, positions, time):
-        return self.electric_field.interpolate_at_positions(positions)

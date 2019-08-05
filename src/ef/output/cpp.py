@@ -13,7 +13,7 @@ class OutputWriterCpp(OutputWriterNumberedH5):
         gg = h5file.create_group('SpatialMesh')
         sim.spat_mesh.mesh.export_h5(gg)
         for i, c in enumerate('xyz'):
-            gg['electric_field_{}'.format(c)] = sim.spat_mesh.electric_field.data[..., i].flatten()
+            gg['electric_field_{}'.format(c)] = sim.spat_mesh.electric_field.array.data[..., i].flatten()
         gg['charge_density'] = sim.spat_mesh.charge_density.data.flatten()
         gg['potential'] = sim.spat_mesh.potential.data.flatten()
 

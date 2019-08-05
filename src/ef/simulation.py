@@ -39,14 +39,14 @@ class Simulation(SerializableH5):
         if self.particle_interaction_model == Model.binary:
             self._dynamic_field = FieldParticles('binary_particle_field', self.particle_arrays)
             if not is_trivial(spat_mesh.potential, inner_regions):
-                self._dynamic_field += self.spat_mesh
+                self._dynamic_field += self.spat_mesh.electric_field
         elif self.particle_interaction_model == Model.noninteracting:
             if not is_trivial(spat_mesh.potential, inner_regions):
-                self._dynamic_field = self.spat_mesh
+                self._dynamic_field = self.spat_mesh.electric_field
             else:
                 self._dynamic_field = FieldZero('Uniform_potential_zero_field', 'electric')
         else:
-            self._dynamic_field = self.spat_mesh
+            self._dynamic_field = self.spat_mesh.electric_field
 
         self.max_id = max_id
 
@@ -68,7 +68,7 @@ class Simulation(SerializableH5):
         if self.particle_interaction_model == Model.PIC:
             self.eval_charge_density()
             field_solver.eval_potential(self.spat_mesh.charge_density, self.spat_mesh.potential)
-            self.spat_mesh.electric_field = self.spat_mesh.potential.gradient()
+            self.spat_mesh.electric_field.array = self.spat_mesh.potential.gradient()
         self.shift_new_particles_velocities_half_time_step_back()
         self.consolidate_particle_arrays()
 

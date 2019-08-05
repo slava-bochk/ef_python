@@ -1,6 +1,7 @@
 import numpy as np
 
 from ef.field import Field
+from ef.field.on_grid import FieldOnGrid
 from ef.inner_region import InnerRegion
 from ef.meshgrid import MeshGrid
 from ef.particle_array import ParticleArray
@@ -46,9 +47,9 @@ class Reader:
         mesh = MeshGrid.import_h5(g)
         charge = ArrayOnGrid(mesh, (), np.reshape(g['charge_density'], mesh.n_nodes))
         potential = ArrayOnGrid(mesh, (), np.reshape(g['potential'], mesh.n_nodes))
-        field = ArrayOnGrid(mesh, 3, np.moveaxis(
+        field = FieldOnGrid('spatial_mesh', 'electric', ArrayOnGrid(mesh, 3, np.moveaxis(
             np.array([np.reshape(g['electric_field_{}'.format(c)], mesh.n_nodes) for c in 'xyz']),
-            0, -1))
+            0, -1)))
         spat_mesh = SpatialMesh(mesh, charge, potential, field)
         return Simulation(
             time_grid=TimeGrid.import_h5(h5file['TimeGrid']),

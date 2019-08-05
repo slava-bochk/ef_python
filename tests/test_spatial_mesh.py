@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from ef.config.components import SpatialMeshConf, BoundaryConditionsConf
+from ef.field.on_grid import FieldOnGrid
 from ef.meshgrid import MeshGrid
 from ef.spatial_mesh import SpatialMesh
 from ef.util.array_on_grid import ArrayOnGrid
@@ -37,7 +38,7 @@ class TestDefaultSpatialMesh:
         assert mesh.mesh == MeshGrid((4, 2, 3), (3, 3, 2))
         assert mesh.charge_density == ArrayOnGrid(mesh.mesh)
         assert mesh.potential == ArrayOnGrid(mesh.mesh, (), np.full((3, 3, 2), 3.14))
-        assert mesh.electric_field == ArrayOnGrid(mesh.mesh, 3)
+        assert mesh.electric_field == FieldOnGrid('spatial_mesh', 'electric', ArrayOnGrid(mesh.mesh, 3))
         mesh = SpatialMesh.do_init((12, 12, 12), (4, 4, 6), BoundaryConditionsConf(1, 2, 3, 4, 5, 6))
         potential = np.array([[[5., 1., 6.], [5., 1., 6.], [5., 1., 6.], [5., 1., 6.]],
                               [[5., 3., 6.], [5., 0., 6.], [5., 0., 6.], [5., 4., 6.]],
@@ -76,6 +77,6 @@ class TestDefaultSpatialMesh:
         assert d.keys() == {"mesh", "electric_field", "potential", "charge_density"}
         mesh = MeshGrid((4, 2, 3), (3, 3, 2))
         assert d["mesh"] == mesh
-        assert d["electric_field"] == ArrayOnGrid(mesh, 3)
+        assert d["electric_field"] == FieldOnGrid('spatial_mesh', 'electric', ArrayOnGrid(mesh, 3))
         assert d["potential"] == ArrayOnGrid(mesh)
         assert d["charge_density"] == ArrayOnGrid(mesh)
