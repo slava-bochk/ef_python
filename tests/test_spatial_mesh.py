@@ -3,7 +3,6 @@ import logging
 import h5py
 import numpy as np
 import pytest
-from numpy.testing import assert_array_equal
 
 from ef.config.components import SpatialMeshConf, BoundaryConditionsConf
 from ef.meshgrid import MeshGrid
@@ -47,26 +46,19 @@ class TestDefaultSpatialMesh:
         assert mesh.potential == ArrayOnGrid(mesh.mesh, (), potential)
 
     def test_do_init_ranges(self):
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError):
             SpatialMesh.do_init((10, 20), (2, 1, 3), BoundaryConditionsConf(3.14))
-        assert excinfo.value.args == ('grid_size must be a flat triple', (10, 20))
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError):
             SpatialMesh.do_init(((1, 2), 3), (1, 1, 1), BoundaryConditionsConf(3.14))
-        assert excinfo.value.args == ('grid_size must be a flat triple', ((1, 2), 3))
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError):
             SpatialMesh.do_init((10, 10, 10), [[2, 1, 3], [4, 5, 6], [7, 8, 9]],
                                 BoundaryConditionsConf(3.14))
-        assert excinfo.value.args == ('step_size must be a flat triple', [[2, 1, 3], [4, 5, 6], [7, 8, 9]],)
-
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError):
             SpatialMesh.do_init((10, 10, -30), (2, 1, 3), BoundaryConditionsConf(3.14))
-        assert excinfo.value.args == ('grid_size must be positive', (10, 10, -30))
-        with pytest.raises(ValueError) as excinfo:
+        with pytest.raises(ValueError):
             SpatialMesh.do_init((10, 10, 10), (2, -2, 3), BoundaryConditionsConf(3.14))
-        assert excinfo.value.args == ('step_size must be positive', (2, -2, 3))
-        with pytest.raises(ValueError) as excinfo:
-            SpatialMesh.do_init((10, 10, 10), (17, 2, 3), BoundaryConditionsConf(3.14))
-        assert excinfo.value.args == ('step_size cannot be bigger than grid_size',)
+        mesh = SpatialMesh.do_init((10, 10, 10), (17, 2, 3), BoundaryConditionsConf(3.14))
+        assert tuple(mesh.mesh.cell) == (10, 2, 2.5)
 
     def test_init_h5(self, tmpdir):
         fname = tmpdir.join('test_spatialmesh_init.h5')
@@ -87,4 +79,3 @@ class TestDefaultSpatialMesh:
         assert d["electric_field"] == ArrayOnGrid(mesh, 3)
         assert d["potential"] == ArrayOnGrid(mesh)
         assert d["charge_density"] == ArrayOnGrid(mesh)
-
