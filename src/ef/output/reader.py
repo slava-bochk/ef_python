@@ -7,6 +7,7 @@ from ef.meshgrid import MeshGrid
 from ef.particle_array import ParticleArray
 from ef.particle_interaction_model import Model
 from ef.particle_source import ParticleSource
+from ef.particle_tracker import ParticleTracker
 from ef.simulation import Simulation
 from ef.time_grid import TimeGrid
 from ef.util.array_on_grid import ArrayOnGrid
@@ -58,5 +59,5 @@ class Reader:
             particle_interaction_model=Model[
                 h5file['ParticleInteractionModel'].attrs['particle_interaction_model'].decode('utf8')
             ],
-            particle_sources=sources, particle_arrays=particles, max_id=max_id
+            particle_sources=sources, particle_arrays=particles, particle_tracker=ParticleTracker(max_id)
         )

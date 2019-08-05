@@ -11,6 +11,7 @@ from ef.inner_region import InnerRegion
 from ef.meshgrid import MeshGrid
 from ef.particle_array import ParticleArray
 from ef.particle_interaction_model import Model
+from ef.particle_tracker import ParticleTracker
 from ef.util.array_on_grid import ArrayOnGrid
 from ef.util.serializable_h5 import SerializableH5
 
@@ -27,7 +28,7 @@ class Simulation(SerializableH5):
                  inner_regions: List[InnerRegion],
                  particle_sources,
                  electric_fields, magnetic_fields, particle_interaction_model,
-                 max_id=-1, particle_arrays=()):
+                 particle_tracker=None, particle_arrays=()):
         self.time_grid = time_grid
         self.mesh = mesh
         self.charge_density = charge_density
@@ -54,7 +55,7 @@ class Simulation(SerializableH5):
         else:
             self._dynamic_field = self.electric_field
 
-        self.max_id = max_id
+        self.particle_tracker = ParticleTracker() if particle_tracker is None else particle_tracker
 
     def advance_one_time_step(self, field_solver):
         self.push_particles()
@@ -131,13 +132,8 @@ class Simulation(SerializableH5):
         for src in self.particle_sources:
             particles = src.generate_initial_particles() if initial else src.generate_each_step()
             if len(particles.ids):
-                particles.ids = self.generate_particle_ids(len(particles.ids))
+                particles.ids = self.particle_tracker.generate_particle_ids(len(particles.ids))
                 self.particle_arrays.append(particles)
-
-    def generate_particle_ids(self, num_of_particles):
-        range_of_ids = range(self.max_id + 1, self.max_id + num_of_particles + 1)
-        self.max_id += num_of_particles
-        return np.array(range_of_ids)
 
     def consolidate_particle_arrays(self):
         particles_by_type = defaultdict(list)
