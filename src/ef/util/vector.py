@@ -1,7 +1,11 @@
+from typing import Union, Sequence
+
 import numpy as np
 
+VectorInput = Union[float, Sequence, np.ndarray]
 
-def vector(x, dtype=None):
+
+def vector(x, dtype: Union[type, str, None] = None):
     a = np.array(x)
     if a.shape == ():
         a = np.full(3, x)
@@ -13,4 +17,3 @@ def vector(x, dtype=None):
         return a.astype(dtype, casting='safe', copy=False)
     else:
         return a
-
