@@ -3,6 +3,7 @@ from configparser import ConfigParser
 from io import StringIO
 
 import h5py
+import inject
 import pytest
 from pytest import raises
 
@@ -74,6 +75,7 @@ def test_guess_stdin(tmpdir, monkeypatch):
 
 @pytest.mark.parametrize('solver', [None, 'amg', pytest.param('amgx', marks=pytest.mark.amgx)])
 def test_main(mocker, capsys, tmpdir, monkeypatch, solver):
+    inject.clear()
     monkeypatch.chdir(tmpdir)
     config = tmpdir.join("test_main.conf")
     Config(time_grid=TimeGridConf(10, 5, 1)).export_to_fname("test_main.conf")
@@ -104,8 +106,9 @@ Writing step 10 to file
 Writing to file out_0000010.h5
 """
 
+    inject.clear()
     argv = ["main.py", "out_0000005.h5"] + ([] if solver is None else ["--solver", solver])
-    mocker.patch("sys.argv", ["main.py", "out_0000005.h5"])
+    mocker.patch("sys.argv", argv)
     main()
     out, err = capsys.readouterr()
     assert err == ""

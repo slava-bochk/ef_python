@@ -3,6 +3,7 @@ import subprocess
 from os.path import basename
 from shutil import copytree, copy
 
+import inject
 import pytest
 
 from ef.config.config import Config
@@ -27,6 +28,7 @@ _pytest_params_example_conf = [pytest.param(f.replace('/', os.path.sep), marks=m
 
 @pytest.mark.parametrize("fname", _pytest_params_example_conf)
 def test_example_conf(fname, mocker, capsys, tmpdir, monkeypatch):
+    inject.clear()
     copy(fname, tmpdir.join(basename(fname)))
     monkeypatch.chdir(tmpdir)
     mocker.patch("sys.argv", ["main.py", str(basename(fname))])
