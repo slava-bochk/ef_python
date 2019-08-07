@@ -1,12 +1,13 @@
-import numpy as np
-from numpy.testing import assert_array_equal, assert_array_almost_equal
+import cupy as np
+import numpy
+from cupy.testing import assert_array_equal, assert_array_almost_equal
 from pytest import raises
 
 from ef.meshgrid import MeshGrid
-from ef.util.array_on_grid import ArrayOnGrid
+from ef.util.array_on_grid_cupy import ArrayOnGridCupy as ArrayOnGrid
 
 
-class TestArrayOnGrid:
+class TestArrayOnGridCupy:
     def test_init(self):
         assert_array_equal(ArrayOnGrid(MeshGrid(10, 11)).data, np.zeros((11, 11, 11)))
         assert_array_equal(ArrayOnGrid(MeshGrid(1, 5), 3, np.ones((5, 5, 5, 3))).data, np.ones((5, 5, 5, 3)))
@@ -14,7 +15,7 @@ class TestArrayOnGrid:
             ArrayOnGrid(MeshGrid(1, 5), data=np.ones((5, 5, 5, 3)))
 
     def test_n_nodes(self):
-        assert_array_equal(ArrayOnGrid(MeshGrid(10, 11)).n_nodes, (11, 11, 11))
+        assert ArrayOnGrid(MeshGrid(10, 11)).n_nodes == (11, 11, 11)
         assert ArrayOnGrid(MeshGrid(10, 11), None).n_nodes == (11, 11, 11)
         assert ArrayOnGrid(MeshGrid(10, 11), ()).n_nodes == (11, 11, 11)
         assert ArrayOnGrid(MeshGrid(10, 11), 1).n_nodes == (11, 11, 11, 1)  # Should this be true?
@@ -103,7 +104,7 @@ class TestArrayOnGrid:
                                       [[[-3, 1, 4], [0, 0, 4]], [[-2, 1, 3], [0, 0, 3]], [[-1, 1, 2], [0, 0, 2]]],
                                       [[[0, 0, 4], [0, 0, 4]], [[-2, 0, 4], [0, 0, 4]], [[-4, 0, 4], [0, 0, 4]]]])
         field = potential.gradient()
-        assert field == expected
+        field.assert_eq(expected)
         with raises(ValueError, match="Trying got compute gradient for a non-scalar field: ambiguous"):
             field.gradient()
 
@@ -111,7 +112,7 @@ class TestArrayOnGrid:
         mesh = MeshGrid(12, (4, 4, 3))
         a = ArrayOnGrid(mesh)
         assert a.is_the_same_on_all_boundaries
-        for x, y, z in np.ndindex(4, 4, 3):
+        for x, y, z in numpy.ndindex(4, 4, 3):
             a.data[x, y, z] = 2.
             if 0 < x < 3 and 0 < y < 3 and 0 < z < 2:
                 assert a.is_the_same_on_all_boundaries
@@ -122,7 +123,7 @@ class TestArrayOnGrid:
 
         a = ArrayOnGrid(mesh, 3)
         assert a.is_the_same_on_all_boundaries
-        for x, y, z, t in np.ndindex(4, 4, 3, 3):
+        for x, y, z, t in numpy.ndindex(4, 4, 3, 3):
             a.data[x, y, z, t] = 2.
             if 0 < x < 3 and 0 < y < 3 and 0 < z < 2:
                 assert a.is_the_same_on_all_boundaries
