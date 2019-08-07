@@ -13,29 +13,24 @@ class ArrayOnGrid(SerializableH5):
             value_shape = ()
         self.value_shape = (value_shape,) if type(value_shape) is int else tuple(value_shape)
         if data is None:
-            self.data = self.zero
+            self._data = self.zero
         else:
             data = self.xp.array(data)
             if data.shape != self.n_nodes:
                 raise ValueError("Unexpected raw data array shape: {} for this ArrayOnGrid shape: {}".format(
                     data.shape, self.n_nodes
                 ))
-            self.data = data
+            self._data = data
 
-    def assert_eq(self, other):
-        assert type(self) is type(other)
-        self.grid.assert_eq(other.grid)
-        assert self.value_shape == other.value_shape
-        assert self.n_nodes == other.n_nodes
-        self.xp.testing.assert_array_equal(self.data, other.data)
+    @property
+    def dict(self):
+        d = super().dict
+        d["data"] = self.data
+        return d
 
-    def __eq__(self, other):
-        if self is other:
-            return True
-        if type(self) is not type(other):
-            return NotImplemented
-        return all((self.grid == other.grid, self.n_nodes == other.n_nodes, self.value_shape == other.value_shape,
-                    (self.data == other.data).all()))
+    @property
+    def data(self):
+        return self._data
 
     @property
     def cell(self):
@@ -58,7 +53,7 @@ class ArrayOnGrid(SerializableH5):
         return self.xp.zeros(self.n_nodes, self.xp.float)
 
     def reset(self):
-        self.data = self.zero
+        self._data = self.zero
 
     def distribute_at_positions(self, value, positions):
         """
@@ -87,7 +82,7 @@ class ArrayOnGrid(SerializableH5):
                     nodes_to_update = nodes + dn  # (np, 3)
                     w_nz = w[w > 0]
                     n_nz = nodes_to_update[w > 0]
-                    self.scatter_add(self.data, tuple(n_nz.transpose()), w_nz * density)
+                    self.scatter_add(self._data, tuple(n_nz.transpose()), w_nz * density)
 
     def scatter_add(self, a, slices, value):
         self.xp.add.at(a, slices, value)
@@ -101,25 +96,26 @@ class ArrayOnGrid(SerializableH5):
         """
         o, s = self.origin, self.size
         xyz = tuple(self.xp.linspace(o[i], o[i] + s[i], self.n_nodes[i]) for i in (0, 1, 2))
-        interpolator = RegularGridInterpolator(xyz, self.data, bounds_error=False, fill_value=0)
+        interpolator = RegularGridInterpolator(xyz, self._data, bounds_error=False, fill_value=0)
         return interpolator(positions)
 
     def gradient(self):
         if self.value_shape != ():
             raise ValueError("Trying got compute gradient for a non-scalar field: ambiguous")
-        return ArrayOnGrid(self.grid, 3, -self.xp.stack(self.xp.gradient(self.data, *self.cell), -1))
+        return ArrayOnGrid(self.grid, 3, -self.xp.stack(self.xp.gradient(self._data, *self.cell), -1))
 
     @property
     def is_the_same_on_all_boundaries(self):
-        x0 = self.data[0, 0, 0]
+        x0 = self._data[0, 0, 0]
         r3 = range(3)
         slices = [tuple(x if i == j else slice(None) for j in r3) for i in r3 for x in (0, -1)]
-        return all(self.xp.all(self.data[s] == x0) for s in slices)
+        return all(self.xp.all(self._data[s] == x0) for s in slices)
 
     def apply_boundary_values(self, boundary_conditions):
-        self.data[:, 0, :] = boundary_conditions.bottom
-        self.data[:, -1, :] = boundary_conditions.top
-        self.data[0, :, :] = boundary_conditions.right
-        self.data[-1, :, :] = boundary_conditions.left
-        self.data[:, :, 0] = boundary_conditions.near
-        self.data[:, :, -1] = boundary_conditions.far
+        self._data[:, 0, :] = boundary_conditions.bottom
+        self._data[:, -1, :] = boundary_conditions.top
+        self._data[0, :, :] = boundary_conditions.right
+        self._data[-1, :, :] = boundary_conditions.left
+        self._data[:, :, 0] = boundary_conditions.near
+        self._data[:, :, -1] = boundary_conditions.far
+

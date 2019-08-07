@@ -1,4 +1,5 @@
 import h5py
+import pytest
 
 from ef.config.config import Config
 from ef.output import OutputWriterNumberedH5, OutputWriterNone
@@ -8,7 +9,7 @@ from ef.output.python import OutputWriterPython
 from ef.output.reader import Reader
 from test_simulation import TestSimulation
 
-
+@pytest.mark.usefixtures('backend')
 class TestOutput:
     def test_write_none(self, monkeypatch, tmpdir):
         monkeypatch.chdir(tmpdir)
@@ -28,7 +29,7 @@ class TestOutput:
         assert tmpdir.join('test_0000000.ext').exists()
         with h5py.File('test_0000000.ext') as h5file:
             assert Reader().guess_h5_format(h5file) == 'cpp'
-            assert Reader().read_simulation(h5file) == sim
+            Reader().read_simulation(h5file).assert_eq(sim)
 
     def test_write_python(self, monkeypatch, tmpdir):
         monkeypatch.chdir(tmpdir)
@@ -40,7 +41,7 @@ class TestOutput:
         assert tmpdir.join('test_0000000.ext').exists()
         with h5py.File('test_0000000.ext') as h5file:
             assert Reader().guess_h5_format(h5file) == 'python'
-            assert Reader().read_simulation(h5file) == sim
+            Reader().read_simulation(h5file).assert_eq(sim)
 
     def test_write_history(self, monkeypatch, tmpdir):
         monkeypatch.chdir(tmpdir)
@@ -55,7 +56,7 @@ class TestOutput:
         assert writer.h5file.keys() == {'history', 'simulation'}
         with h5py.File('test_history.ext') as h5file:
             assert Reader().guess_h5_format(h5file) == 'history'
-            assert Reader().read_simulation(h5file) == sim
+            Reader().read_simulation(h5file).assert_eq(sim)
 
     def test_numbered(self, capsys, mocker):
         mocker.patch('h5py.File')

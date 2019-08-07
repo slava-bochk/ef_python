@@ -17,6 +17,16 @@ class ArrayOnGridCupy(ArrayOnGrid):
         self._origin = self.xp.array(grid.origin)
 
     @property
+    def dict(self):
+        d = super().dict
+        d.pop('xp')
+        return d
+
+    @property
+    def data(self):
+        return self._data.get()
+
+    @property
     def cell(self):
         return self._cell
 
@@ -45,7 +55,7 @@ class ArrayOnGridCupy(ArrayOnGrid):
         field_on_nodes = self.xp.empty((len(positions), 8, *self.value_shape))  # (np, 8, F)
         field_on_nodes[out_of_bounds] = 0  # (oob(np*8), F) interpolate out-of-bounds field as 0
         nodes_in_bounds = nodes_to_use[~out_of_bounds].transpose()  # 3, ib(np*8)
-        field_on_nodes[~out_of_bounds] = self.data[tuple(nodes_in_bounds)]  # (ib(np*8), F)
+        field_on_nodes[~out_of_bounds] = self._data[tuple(nodes_in_bounds)]  # (ib(np*8), F)
         weight_on_nodes = w[..., dn[:, self.xp.array((0, 1, 2))], self.xp.array((0, 1, 2))].prod(-1)  # shape is (np, 8)
         return self.xp.moveaxis((self.xp.moveaxis(field_on_nodes, (0, 1), (-2, -1)) * weight_on_nodes)
                                 .sum(axis=-1), -1, 0).get()  # shape is (np, F)
@@ -56,7 +66,7 @@ class ArrayOnGridCupy(ArrayOnGrid):
             raise ValueError("Trying got compute gradient for a non-scalar field: ambiguous")
         if any(n < 2 for n in self.n_nodes):
             raise ValueError("ArrayOnGrid too small to compute gradient")
-        f = self.data
+        f = self._data
         result = self.xp.empty((3, *self.n_nodes))
 
         internal = slice(1, -1)

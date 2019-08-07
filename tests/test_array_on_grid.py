@@ -6,43 +6,9 @@ from pytest import raises
 
 from ef.meshgrid import MeshGrid
 from ef.util.array_on_grid import ArrayOnGrid
-from ef.util.array_on_grid_cupy import ArrayOnGridCupy
-
-try:
-    import cupy
-
-    _is_cupy_installed = True
-except ImportError:
-    _is_cupy_installed = False
 
 
-def config(xp):
-    def conf(binder):
-        if xp == 'numpy':
-            binder.bind(ArrayOnGrid, ArrayOnGrid)
-            binder.bind(np, np)
-            binder.bind(assert_array_equal, assert_array_equal)
-            binder.bind(assert_array_almost_equal, assert_array_almost_equal)
-        elif xp == 'cupy':
-            binder.bind(ArrayOnGrid, ArrayOnGridCupy)
-            binder.bind(np, cupy)
-            binder.bind(assert_array_equal, cupy.testing.assert_array_equal)
-            binder.bind(assert_array_almost_equal, cupy.testing.assert_array_almost_equal)
-
-    return conf
-
-
-xp_params = ['numpy', 'cupy'] if _is_cupy_installed else ['numpy']
-
-
-@pytest.fixture(scope="module", params=xp_params, ids=xp_params)
-def xp(request):
-    inject.clear_and_configure(config(request.param))
-    yield
-    inject.clear()
-
-
-@pytest.mark.usefixtures("xp")
+@pytest.mark.usefixtures("backend")
 class TestArrayOnGrid:
     Array = inject.attr(ArrayOnGrid)
     xp = inject.attr(np)
@@ -125,7 +91,7 @@ class TestArrayOnGrid:
 
     def test_interpolate_vector(self):
         a = self.Array(MeshGrid((2, 4, 8), (3, 3, 3)), 3, self.xp.full((3, 3, 3, 3), 100))
-        a.data[1:2, 0:2, 0:2] = self.xp.array([[[2, 1, 0], [-3, 1, 0]],
+        a._data[1:2, 0:2, 0:2] = self.xp.array([[[2, 1, 0], [-3, 1, 0]],
                                                [[0, -1, 0], [-1, 0, 0]]])
         self.assert_ae(a.interpolate_at_positions([(1, 1, 3)]), [(-1.25, 0.375, 0)])
         self.assert_ae(a.interpolate_at_positions([(1, 1, 3), (2, 1, 3), (1.5, 1, 3)]),
@@ -136,7 +102,7 @@ class TestArrayOnGrid:
     def test_gradient(self):
         m = MeshGrid((1.5, 2, 1), (4, 3, 2))
         potential = self.Array(m)
-        potential.data = self.xp.stack([self.xp.array([[0., 0, 0],
+        potential._data = self.xp.stack([self.xp.array([[0., 0, 0],
                                                        [1, 2, 3],
                                                        [4, 3, 2],
                                                        [4, 4, 4]]), self.xp.zeros((4, 3))], -1)
@@ -154,7 +120,7 @@ class TestArrayOnGrid:
         a = self.Array(mesh)
         assert a.is_the_same_on_all_boundaries
         for x, y, z in np.ndindex(4, 4, 3):
-            a.data[x, y, z] = 2.
+            a._data[x, y, z] = 2.
             if 0 < x < 3 and 0 < y < 3 and 0 < z < 2:
                 assert a.is_the_same_on_all_boundaries
             else:
@@ -165,7 +131,7 @@ class TestArrayOnGrid:
         a = self.Array(mesh, 3)
         assert a.is_the_same_on_all_boundaries
         for x, y, z, t in np.ndindex(4, 4, 3, 3):
-            a.data[x, y, z, t] = 2.
+            a._data[x, y, z, t] = 2.
             if 0 < x < 3 and 0 < y < 3 and 0 < z < 2:
                 assert a.is_the_same_on_all_boundaries
             else:

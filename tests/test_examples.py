@@ -28,13 +28,13 @@ _pytest_params_example_conf = [pytest.param(f.replace('/', os.path.sep), marks=m
 
 @pytest.mark.parametrize("fname", _pytest_params_example_conf)
 def test_example_conf(fname, mocker, capsys, tmpdir, monkeypatch):
-    inject.clear()
     copy(fname, tmpdir.join(basename(fname)))
     monkeypatch.chdir(tmpdir)
     mocker.patch("sys.argv", ["main.py", str(basename(fname))])
     main()
     out, err = capsys.readouterr()
     assert err == ""
+    inject.clear()
 
 
 def run_jupyter(dir, fname, path=None, copy_dir=False):
@@ -48,6 +48,7 @@ def run_jupyter(dir, fname, path=None, copy_dir=False):
         copytree(dir, path)
     ep = ExecutePreprocessor(timeout=600)
     ep.preprocess(nb, {'metadata': {'path': path}} if path is not None else {})
+    inject.clear()
 
 
 @pytest.mark.slowish
