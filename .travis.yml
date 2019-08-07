@@ -1,12 +1,9 @@
+sudo: false
 language: python
-matrix:
-  include:
-  - python: "3.6"
-    env: TOXENV=check,py36
-  - python: "3.6-dev"
-    env: TOXENV=py36
-  - python: "3.7-dev"
-    env: TOXENV=py37
-script:
-  - pip install tox
-  - tox
+python:
+  - "3.6"
+  - "3.6-dev"
+  - "3.7"
+  - "3.7-dev"
+install: pip install tox-travis
+script: tox
