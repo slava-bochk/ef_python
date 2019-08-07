@@ -23,7 +23,7 @@ setup(
     zip_safe=True,
     python_requires='>=3.6',
     setup_requires=['setuptools_scm', 'setuptools>=38.6.0', 'wheel>=0.31.0', 'twine>=1.11.0'],  # md description support
-    install_requires=['numpy', 'h5py', 'rowan', 'simpleeval', 'scipy', 'inject'],
+    install_requires=['numpy', 'h5py', 'rowan', 'simpleeval', 'scipy', 'inject', 'decorator'],
     extras_require={'jupyter-examples': ['sympy', 'matplotlib', 'jupyter', 'pandas', 'sympy', 'nbformat'],
                     'amgx': ['pyamgx'],
                     'amg': ['pyamg'],

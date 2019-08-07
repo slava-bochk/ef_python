@@ -4,6 +4,7 @@ import inject
 
 from ef.field.on_grid import FieldOnGrid
 from ef.meshgrid import MeshGrid
+from ef.util import safe_default_inject
 from ef.util.array_on_grid import ArrayOnGrid
 
 __all__ = ['SpatialMeshConf', 'SpatialMeshSection']
@@ -29,6 +30,7 @@ class SpatialMeshConf(ConfigComponent):
         x, y, z = self.step
         return SpatialMeshSection(X, x, Y, y, Z, z)
 
+    @safe_default_inject
     @inject.params(array_class=ArrayOnGrid)
     def make(self, array_class: Type[ArrayOnGrid]):
         grid = MeshGrid.from_step(self.size, self.step)
