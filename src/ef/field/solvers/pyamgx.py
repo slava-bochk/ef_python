@@ -1,10 +1,9 @@
-import pyamgx
-
 from ef.field.solvers import FieldSolver
 
 
 class FieldSolverPyamgx(FieldSolver):
     def __del__(self):
+        import pyamgx
         self._solver.destroy()
         self._rhs.destroy()
         self._phi_vec.destroy()
@@ -14,6 +13,7 @@ class FieldSolverPyamgx(FieldSolver):
         pyamgx.finalize()
 
     def create_solver_and_preconditioner(self):
+        import pyamgx
         self.maxiter = 1000
         self.tol = 1e-10
         pyamgx.initialize()

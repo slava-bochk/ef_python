@@ -1,10 +1,9 @@
-import pyamg
-
 from ef.field.solvers import FieldSolver
 
 
 class FieldSolverPyamg(FieldSolver):
     def create_solver_and_preconditioner(self):
+        import pyamg
         self.maxiter = 1000
         self.tol = 1e-10
         self._solver = pyamg.ruge_stuben_solver(self.A)
