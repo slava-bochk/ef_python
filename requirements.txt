@@ -1,8 +1,13 @@
 numpy
 h5py
-matplotlib
 rowan
-sympy<1.3
 simpleeval
 scipy
+inject
+sympy
+matplotlib
+jupyter
 pandas
+sympy
+nbformat
+pyamg
