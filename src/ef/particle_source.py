@@ -1,5 +1,6 @@
 from math import sqrt
 
+import inject
 import numpy as np
 from numpy.random import RandomState
 
@@ -10,7 +11,8 @@ from ef.util.vector import vector, VectorInput
 
 
 class ParticleSource(SerializableH5):
-    def __init__(self, name="particle_source", shape=Box(), initial_number_of_particles: int = 0,
+    @inject.params(shape=Box)
+    def __init__(self, name="particle_source", shape=None, initial_number_of_particles: int = 0,
                  particles_to_generate_each_step: int = 0,
                  mean_momentum: VectorInput = 0,
                  temperature: float = 0., charge: float = 0., mass: float = 1.):

@@ -1,10 +1,12 @@
 import numpy as np
+import pytest
 
 from ef.inner_region import InnerRegion
 from ef.particle_array import ParticleArray
 from ef.config.components import Box
 
 
+@pytest.mark.usefixtures('backend')
 class TestInnerRegion:
     def test_init(self):
         ir = InnerRegion('test', Box())
@@ -14,7 +16,7 @@ class TestInnerRegion:
         assert ir.total_absorbed_charge == 0
         assert ir.inverted == False
 
-    def test_absorb_charge(self, backend):
+    def test_absorb_charge(self):
         particles = ParticleArray([1], -2.0, 1.0, (0, 0, 0), np.zeros(3))
         ir = InnerRegion('test', Box())
         assert ir.total_absorbed_particles == 0
@@ -40,7 +42,7 @@ class TestInnerRegion:
         assert ir.total_absorbed_charge == -2
         assert particles == ParticleArray([2], -2.0, 1.0, [(10, 10, 10)], np.zeros((1, 3)))
 
-    def test_absorb_charge_inverted(self, backend):
+    def test_absorb_charge_inverted(self):
         particles = ParticleArray([1], -2.0, 1.0, (0, 0, 0), np.zeros(3))
         ir = InnerRegion('test', Box(), inverted=True)
         assert ir.total_absorbed_particles == 0

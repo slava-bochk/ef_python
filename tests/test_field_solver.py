@@ -26,7 +26,7 @@ class TestFieldSolver:
                                                                            (4, 1, 3, 1),
                                                                            (5, 2, 3, 1)])
 
-    def test_generate_nodes_in_regions(self):
+    def test_generate_nodes_in_regions(self, backend):
         mesh = MeshGrid.from_step((4, 6, 9), (1, 2, 3))
         solver = FieldSolver(mesh, [])
         inner_regions = [InnerRegion('test', Box((1, 2, 3), (1, 2, 3)), 3)]
@@ -34,7 +34,7 @@ class TestFieldSolver:
         assert_array_equal(nodes, [0, 1, 3, 4, 6, 7, 9, 10])
         assert_array_equal(potential, [3, 3, 3, 3, 3, 3, 3, 3])
 
-    def test_init_rhs(self):
+    def test_init_rhs(self, backend):
         mesh = MeshGrid.from_step((4, 3, 3), 1)
         solver = FieldSolver(mesh, [])
         solver.init_rhs_vector_in_full_domain(ArrayOnGrid(mesh), ArrayOnGrid(mesh))
@@ -84,7 +84,7 @@ class TestFieldSolver:
         solver.init_rhs_vector(ArrayOnGrid(mesh), ArrayOnGrid(mesh))
         assert_array_equal(solver.rhs, [3, 3, 0, 3, 3, 0, 3, 3, 0, 3, 3, 0])
 
-    def test_zero_nondiag_inside_objects(self):
+    def test_zero_nondiag_inside_objects(self, backend):
         mesh = MeshGrid.from_step((4, 6, 9), (1, 2, 3))
         solver = FieldSolver(mesh, [InnerRegion('test', Box((1, 2, 3), (1, 2, 3)), 3)])
 

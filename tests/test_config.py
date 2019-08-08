@@ -1,5 +1,7 @@
 from configparser import ConfigParser
 
+import pytest
+
 from ef.config.components import *
 from ef.config.config import Config
 from ef.config.section import ConfigSection
@@ -9,14 +11,14 @@ comp_list = [BoundaryConditionsConf, InnerRegionConf, OutputFileConf, ParticleIn
              ExternalMagneticFieldUniformConf, ExternalElectricFieldUniformConf]
 
 
-def test_components_to_conf_and_back():
+def test_components_to_conf_and_back(backend):
     for Component in comp_list:
         x = Component()
         y = x.to_conf().make()
         assert x == y
 
 
-def test_conf_to_configparser_and_back():
+def test_conf_to_configparser_and_back(backend):
     confs = [C().to_conf() for C in comp_list]
     parser = ConfigParser()
     for c in confs:
@@ -36,6 +38,7 @@ def test_minimal_example():
                           OutputFileConf('example_', '.h5')]
 
 
+@pytest.mark.usefixtures("backend")
 class TestEfConf:
     def test_conf_export(self):
         conf = Config(sources=[ParticleSourceConf()], inner_regions=(InnerRegionConf(),))
@@ -65,7 +68,7 @@ def test_potentials():
     assert Config().get_potentials() == [0., 0., 0., 0., 0., 0.]
 
 
-def test_is_trivial():
+def test_is_trivial(backend):
     assert BoundaryConditionsConf().is_the_same_on_all_boundaries
     assert BoundaryConditionsConf(3.14).is_the_same_on_all_boundaries
     assert not BoundaryConditionsConf(*range(6)).is_the_same_on_all_boundaries

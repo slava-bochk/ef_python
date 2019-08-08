@@ -1,3 +1,5 @@
+import inject
+
 from ef import particle_source
 
 __all__ = ["ParticleSourceConf", "ParticleSourceBoxSection", "ParticleSourceCylinderSection",
@@ -13,7 +15,8 @@ from ef.config.component import ConfigComponent
 
 
 class ParticleSourceConf(ConfigComponent):
-    def __init__(self, name='ParticleSource1', shape=Box(),
+    @inject.params(shape=Box)
+    def __init__(self, name='ParticleSource1', shape=None,
                  initial_particles=500,
                  particles_to_generate_each_step=500,
                  momentum=(0, 0, 6.641e-15),

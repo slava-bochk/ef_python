@@ -3,6 +3,7 @@ from math import sqrt
 
 import h5py
 import numpy as np
+import pytest
 from numpy.random.mtrand import RandomState
 from numpy.testing import assert_array_equal
 
@@ -10,7 +11,7 @@ from ef.config.components import Box
 from ef.particle_array import ParticleArray
 from ef.particle_source import ParticleSource
 
-
+@pytest.mark.usefixtures("backend")
 class TestParticleSource:
     def test_init(self):
         p = ParticleSource()
@@ -23,14 +24,14 @@ class TestParticleSource:
         assert p.charge == 0
         assert p.mass == 1
 
-    def test_generate_for_simulation(self, backend):
+    def test_generate_for_simulation(self):
         ps = ParticleSource('test', Box(6, 0), 17, 13, (4, 4, 4), 0, -2, 6)
         ps.generate_initial_particles().assert_eq(
             ParticleArray(range(17), -2, 6, np.full((17, 3), 6), np.full((17, 3), 4), False))
         ps.generate_each_step().assert_eq(
             ParticleArray(range(13), -2, 6, np.full((13, 3), 6), np.full((13, 3), 4), False))
 
-    def test_generate_particles(self, backend):
+    def test_generate_particles(self):
         ps = ParticleSource('test', Box((1., 2., 3.), 0), 17, 13, (-2, 3, 1), 0, -2, 6)
         ps.generate_num_of_particles(3).assert_eq(
             ParticleArray(range(3), -2, 6, [(1, 2, 3)] * 3, [(-2, 3, 1)] * 3, False))
@@ -39,7 +40,7 @@ class TestParticleSource:
         ps.generate_num_of_particles(0).assert_eq(
             ParticleArray([], -2, 6, np.empty((0, 3)), np.empty((0, 3)), False))
 
-    def test_generate_positions(self, backend):
+    def test_generate_positions(self):
         ps = ParticleSource()
         ps._generator = RandomState(123)
         p = ps.generate_num_of_particles(100)

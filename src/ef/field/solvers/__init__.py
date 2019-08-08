@@ -63,6 +63,7 @@ class FieldSolver:
         potential = np.empty_like(n, np.float)
         for ir in inner_regions:
             mask = ir.check_if_points_inside(xyz)
+            mask = mask.get() if hasattr(mask, 'get') else mask
             if np.logical_and.reduce([mask, inside, potential != ir.potential]).any():
                 raise ValueError("Found intersecting inner regions with different potentials.")
             potential[mask] = ir.potential
