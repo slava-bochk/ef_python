@@ -29,10 +29,20 @@ class FieldSolver:
         dx, dy, dz = cy * cz, cx * cz, cx * cy
         diag_dx = self.get_diag_d2dx2_in_3d(nx, ny, nz, dx)
         diag_dy = self.get_diag_d2dy2_in_3d(nx, ny, nz, dy)
-        matrix = scipy.sparse.diags([-2.0 * (dx + dy + dz), diag_dx, diag_dx, diag_dy, diag_dy, dz, dz],
-                                    [0, -1, 1, -nx, nx, -nx * ny, nx * ny],
-                                    shape=(size, size), format='csr')
-        return self.zero_nondiag_for_nodes_inside_objects(matrix)
+        i = np.concatenate((np.arange(size),
+                            np.arange(size - 1), np.arange(1, size),
+                            np.arange(size - nx), np.arange(nx, size),
+                            np.arange(size - nx * ny), np.arange(nx * ny, size)))
+        j = np.concatenate((np.arange(size),
+                            np.arange(1, size), np.arange(size - 1),
+                            np.arange(nx, size), np.arange(size - nx),
+                            np.arange(nx * ny, size), np.arange(size - nx * ny)))
+        values = np.concatenate((np.full(size, -2.0 * (dx + dy + dz)),
+                                 diag_dx, diag_dx,
+                                 diag_dy, diag_dy,
+                                 np.full(size - nx * ny, dz), np.full(size - nx * ny, dz)))
+        matrix = scipy.sparse.coo_matrix((values, (i, j)), shape=(size, size))
+        return self.zero_nondiag_for_nodes_inside_objects(matrix.tocsr())
 
     @staticmethod
     def get_diag_d2dx2_in_3d(nx, ny, nz, dx):
