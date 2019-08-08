@@ -8,6 +8,7 @@ from configparser import ConfigParser
 
 import h5py
 import inject
+import numpy
 from inject import Binder, BinderCallable
 
 from ef.config.components import OutputFileConf
@@ -24,7 +25,13 @@ from ef.util.array_on_grid_cupy import ArrayOnGridCupy
 def make_injection_config(solver: str, backend: str) -> BinderCallable:
     def conf(binder: Binder) -> None:
         binder.bind(FieldSolver, FieldSolverPyamgx if solver == 'amgx' else FieldSolverPyamg)
-        binder.bind(ArrayOnGrid, ArrayOnGridCupy if backend == 'cupy' else ArrayOnGrid)
+        if backend == 'cupy':
+            import cupy
+            binder.bind(ArrayOnGrid, ArrayOnGridCupy)
+            binder.bind(numpy, cupy)
+        else:
+            binder.bind(ArrayOnGrid, ArrayOnGrid)
+            binder.bind(numpy, numpy)
 
     return conf
 
@@ -44,7 +51,7 @@ def main():
     args = parser.parse_args()
 
     is_config, parser_or_h5_filename = args.config_or_h5_file
-    inject.configure(make_injection_config(args.solver, args.backend))
+    inject.clear_and_configure(make_injection_config(args.solver, args.backend))
     if is_config:
         conf = read_conf(parser_or_h5_filename, args.prefix, args.suffix, args.output_format)
         sim = conf.make()

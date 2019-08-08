@@ -14,7 +14,7 @@ class TestInnerRegion:
         assert ir.total_absorbed_charge == 0
         assert ir.inverted == False
 
-    def test_absorb_charge(self):
+    def test_absorb_charge(self, backend):
         particles = ParticleArray([1], -2.0, 1.0, (0, 0, 0), np.zeros(3))
         ir = InnerRegion('test', Box())
         assert ir.total_absorbed_particles == 0
@@ -40,7 +40,7 @@ class TestInnerRegion:
         assert ir.total_absorbed_charge == -2
         assert particles == ParticleArray([2], -2.0, 1.0, [(10, 10, 10)], np.zeros((1, 3)))
 
-    def test_absorb_charge_inverted(self):
+    def test_absorb_charge_inverted(self, backend):
         particles = ParticleArray([1], -2.0, 1.0, (0, 0, 0), np.zeros(3))
         ir = InnerRegion('test', Box(), inverted=True)
         assert ir.total_absorbed_particles == 0
