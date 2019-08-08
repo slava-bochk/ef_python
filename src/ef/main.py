@@ -7,12 +7,26 @@ from argparse import ArgumentTypeError
 from configparser import ConfigParser
 
 import h5py
+import inject
+from inject import Binder, BinderCallable
 
 from ef.config.components import OutputFileConf
 from ef.config.config import Config
-from ef.field.solvers import pyamg
+from ef.field.solvers import FieldSolver
+from ef.field.solvers.pyamg import FieldSolverPyamg
+from ef.field.solvers.pyamgx import FieldSolverPyamgx
 from ef.output.reader import Reader
 from ef.runner import Runner
+from ef.util.array_on_grid import ArrayOnGrid
+from ef.util.array_on_grid_cupy import ArrayOnGridCupy
+
+
+def make_injection_config(solver: str, backend: str) -> BinderCallable:
+    def conf(binder: Binder) -> None:
+        binder.bind(FieldSolver, FieldSolverPyamgx if solver == 'amgx' else FieldSolverPyamg)
+        binder.bind(ArrayOnGrid, ArrayOnGridCupy if backend == 'cupy' else ArrayOnGrid)
+
+    return conf
 
 
 def main():
@@ -24,20 +38,18 @@ def main():
     parser.add_argument("--suffix", help="customize output file suffix")
     parser.add_argument("--solver", default="amg", help="select field solving library",
                         choices=["amg", "amgx"])
+    parser.add_argument("--backend", default="numpy", help="select acceleration library",
+                        choices=["numpy", "cupy"])
 
     args = parser.parse_args()
 
     is_config, parser_or_h5_filename = args.config_or_h5_file
-    if args.solver == 'amg':
-        solver_class = pyamg.FieldSolverPyamg
-    elif args.solver == 'amgx':
-        from ef.field.solvers import pyamgx
-        solver_class = pyamgx.FieldSolverPyamgx
+    inject.configure(make_injection_config(args.solver, args.backend))
     if is_config:
         conf = read_conf(parser_or_h5_filename, args.prefix, args.suffix, args.output_format)
         sim = conf.make()
         writer = conf.output_file.make()
-        Runner(sim, solver_class(sim.mesh, sim.inner_regions), writer).start()
+        Runner(sim, output_writer=writer).start()
     else:
         print("Continuing from h5 file:", parser_or_h5_filename)
         prefix, suffix = merge_h5_prefix_suffix(parser_or_h5_filename, args.prefix, args.suffix)
@@ -45,7 +57,8 @@ def main():
         with h5py.File(parser_or_h5_filename, 'r') as h5file:
             sim = Reader.read_simulation(h5file)
         writer = OutputFileConf(prefix, suffix, args.output_format).make()
-        Runner(sim, solver_class(sim.mesh, sim.inner_regions), writer).continue_()
+        Runner(sim, output_writer=writer).continue_()
+    inject.clear()
     del sim
     return 0
 

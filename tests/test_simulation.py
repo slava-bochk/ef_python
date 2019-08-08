@@ -1,9 +1,10 @@
 from configparser import ConfigParser
-from math import sqrt
+from typing import Type
 
+import inject
 import numpy as np
 import pytest
-from numpy.testing import assert_array_almost_equal, assert_array_equal
+from numpy.testing import assert_array_equal
 
 from ef.config.components import *
 from ef.config.config import Config
@@ -13,7 +14,6 @@ from ef.field.on_grid import FieldOnGrid
 from ef.field.uniform import FieldUniform
 from ef.inner_region import InnerRegion
 from ef.meshgrid import MeshGrid
-from ef.particle_array import ParticleArray
 from ef.particle_interaction_model import Model
 from ef.runner import Runner
 from ef.time_grid import TimeGrid
@@ -35,7 +35,9 @@ class TestSimulation:
                                               ExternalMagneticFieldExpressionConf('y',
                                                                                   ('0', '0', '3*x + sqrt(y) - z**2'))])
 
-    def test_init_from_config(self):
+    Array: Type[ArrayOnGrid] = inject.attr(ArrayOnGrid)
+
+    def test_init_from_config(self, backend):
         efconf = Config()
         parser = ConfigParser()
         parser.read_string(efconf.export_to_string())
@@ -43,16 +45,16 @@ class TestSimulation:
         assert sim.time_grid == TimeGrid(100, 1, 10)
         g = MeshGrid(10, 11)
         assert sim.mesh == g
-        assert sim.potential == ArrayOnGrid(g)
-        assert sim.charge_density == ArrayOnGrid(g)
-        assert sim.electric_field == FieldOnGrid('spatial_mesh', 'electric', ArrayOnGrid(g, 3))
+        assert sim.potential == self.Array(g)
+        assert sim.charge_density == self.Array(g)
+        assert sim.electric_field == FieldOnGrid('spatial_mesh', 'electric', self.Array(g, 3))
         assert sim.inner_regions == []
         assert sim.particle_sources == []
         assert sim.electric_fields == FieldZero('ZeroSum', 'electric')
         assert sim.magnetic_fields == FieldZero('ZeroSum', 'magnetic')
         assert sim.particle_interaction_model == Model.PIC
 
-    def test_all_config(self):
+    def test_all_config(self, backend):
         efconf = self.sim_full_config
         parser = ConfigParser()
         parser.read_string(efconf.export_to_string())
@@ -60,11 +62,11 @@ class TestSimulation:
         sim = conf.make()
         assert sim.time_grid == TimeGrid(200, 2, 20)
         assert sim.mesh == MeshGrid(5, 51)
-        assert sim.electric_field == FieldOnGrid('spatial_mesh', 'electric', ArrayOnGrid(sim.mesh, 3))
-        assert sim.charge_density == ArrayOnGrid(sim.mesh)
+        assert sim.electric_field == FieldOnGrid('spatial_mesh', 'electric', self.Array(sim.mesh, 3))
+        assert sim.charge_density == self.Array(sim.mesh)
         expected = np.full((51, 51, 51), -2.7)
         expected[1:-1, 1:-1, 1:-1] = 0
-        assert sim.potential == ArrayOnGrid(sim.mesh, (), expected)
+        assert sim.potential == self.Array(sim.mesh, (), expected)
         assert sim.inner_regions == [InnerRegion('1', Box(), 1),
                                      InnerRegion('2', Sphere(), -2),
                                      InnerRegion('3', Cylinder(), 0),
@@ -77,7 +79,7 @@ class TestSimulation:
         assert sim.particle_interaction_model == Model.binary
 
     @pytest.mark.parametrize('model', ['noninteracting', 'PIC', 'binary'])
-    def test_cube_of_gas(self, model):
+    def test_cube_of_gas(self, model, backend_and_solver):
         sim = Config(TimeGridConf(1.0, save_step=.5, step=.1), SpatialMeshConf((10, 10, 10), (1, 1, 1)),
                      [ParticleSourceConf('gas', Box(size=(10, 10, 10)), 50, 0, np.zeros(3), 300)],
                      particle_interaction_model=ParticleInteractionModelConf(model)
@@ -85,7 +87,7 @@ class TestSimulation:
         Runner(sim).start()
 
     @pytest.mark.parametrize('model', ['noninteracting', 'PIC', 'binary'])
-    def test_cube_of_gas_with_hole(self, model):
+    def test_cube_of_gas_with_hole(self, model, backend_and_solver):
         sim = Config(TimeGridConf(1.0, save_step=.5, step=.1), SpatialMeshConf((10, 10, 10), (1, 1, 1)),
                      [ParticleSourceConf('gas', Box(size=(10, 10, 10)), 50, 0, np.zeros(3), 300)],
                      [InnerRegionConf('hole', Box(origin=(4, 4, 4), size=(2, 2, 2)))],
@@ -93,7 +95,7 @@ class TestSimulation:
                      ).make()
         Runner(sim).start()
 
-    def test_id_generation(self):
+    def test_id_generation(self, backend_and_solver):
         conf = Config(TimeGridConf(0.001, save_step=.0005, step=0.0001), SpatialMeshConf((10, 10, 10), (1, 1, 1)),
                       sources=[ParticleSourceConf('gas', Box((4, 4, 4), size=(1, 1, 1)), 50, 0, np.zeros(3), 0.00),
                                ParticleSourceConf('gas2', Box((5, 5, 5), size=(1, 1, 1)), 50, 0, np.zeros(3), 0.00)],
@@ -107,7 +109,7 @@ class TestSimulation:
         assert len(sim.particle_arrays) == 1
         assert_array_equal(sim.particle_arrays[0].ids, range(100))
 
-    def test_particle_generation(self, monkeypatch, tmpdir):
+    def test_particle_generation(self, monkeypatch, tmpdir, backend_and_solver):
         monkeypatch.chdir(tmpdir)
         conf = Config(TimeGridConf(2, 1, 1), SpatialMeshConf((5, 5, 5), (.1, .1, .1)),
                       sources=[ParticleSourceConf('a', Box((2, 2, 2), (0, 0, 0)), 2, 1, (0, 0, 0), 0, charge=0),

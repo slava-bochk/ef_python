@@ -1,3 +1,6 @@
+from typing import Type
+
+import inject
 import numpy as np
 
 from ef.field import Field
@@ -14,6 +17,8 @@ from ef.util.array_on_grid import ArrayOnGrid
 
 
 class Reader:
+    array_class: Type[ArrayOnGrid] = inject.attr(ArrayOnGrid)
+
     @staticmethod
     def guess_h5_format(h5file):
         if 'SpatialMesh' in h5file:
@@ -45,9 +50,9 @@ class Reader:
         max_id = int(np.max([p.ids for p in particles], initial=-1))
         g = h5file['SpatialMesh']
         mesh = MeshGrid.import_h5(g)
-        charge = ArrayOnGrid(mesh, (), np.reshape(g['charge_density'], mesh.n_nodes))
-        potential = ArrayOnGrid(mesh, (), np.reshape(g['potential'], mesh.n_nodes))
-        field = FieldOnGrid('spatial_mesh', 'electric', ArrayOnGrid(mesh, 3, np.moveaxis(
+        charge = Reader.array_class(mesh, (), np.reshape(g['charge_density'], mesh.n_nodes))
+        potential = Reader.array_class(mesh, (), np.reshape(g['potential'], mesh.n_nodes))
+        field = FieldOnGrid('spatial_mesh', 'electric', Reader.array_class(mesh, 3, np.moveaxis(
             np.array([np.reshape(g['electric_field_{}'.format(c)], mesh.n_nodes) for c in 'xyz']),
             0, -1)))
         return Simulation(

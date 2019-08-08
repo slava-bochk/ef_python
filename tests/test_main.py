@@ -3,6 +3,7 @@ from configparser import ConfigParser
 from io import StringIO
 
 import h5py
+import inject
 import pytest
 from pytest import raises
 
@@ -72,12 +73,18 @@ def test_guess_stdin(tmpdir, monkeypatch):
     assert guess_input_type('-') == (True, p)
 
 
-@pytest.mark.parametrize('solver', [None, 'amg', pytest.param('amgx', marks=pytest.mark.amgx)])
-def test_main(mocker, capsys, tmpdir, monkeypatch, solver):
+@pytest.mark.parametrize('solver', [' ', 'amg', pytest.param('amgx', marks=pytest.mark.amgx)])
+@pytest.mark.parametrize('backend', [' ', 'numpy', pytest.param('cupy', marks=pytest.mark.cupy)])
+def test_main(mocker, capsys, tmpdir, monkeypatch, solver, backend):
+    inject.clear()
     monkeypatch.chdir(tmpdir)
     config = tmpdir.join("test_main.conf")
     Config(time_grid=TimeGridConf(10, 5, 1)).export_to_fname("test_main.conf")
-    argv = ["main.py", str(config)] + ([] if solver is None else ["--solver", solver])
+    argv = ["main.py", str(config)]
+    if solver != ' ':
+        argv += ["--solver", solver]
+    if backend != ' ':
+        argv += ["--backend", backend]
     mocker.patch("sys.argv", argv)
     main()
     out, err = capsys.readouterr()
@@ -104,8 +111,12 @@ Writing step 10 to file
 Writing to file out_0000010.h5
 """
 
-    argv = ["main.py", "out_0000005.h5"] + ([] if solver is None else ["--solver", solver])
-    mocker.patch("sys.argv", ["main.py", "out_0000005.h5"])
+    argv = ["main.py", "out_0000005.h5"]
+    if solver != ' ':
+        argv += ["--solver", solver]
+    if backend != ' ':
+        argv += ["--backend", backend]
+    mocker.patch("sys.argv", argv)
     main()
     out, err = capsys.readouterr()
     assert err == ""
@@ -116,3 +127,4 @@ Using output prefix and suffix: out_ .h5
 Writing step 10 to file
 Writing to file out_0000010.h5
 """
+    assert not inject.is_configured()

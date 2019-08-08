@@ -1,14 +1,17 @@
+import inject
+
+from ef.field.solvers import FieldSolver
 from ef.field.solvers.pyamg import FieldSolverPyamg
 from ef.output import OutputWriterNone
+from ef.simulation import Simulation
 
 
 class Runner:
-    def __init__(self, simulation, solver=None, output_writer=OutputWriterNone()):
-        if solver is None:
-            solver = FieldSolverPyamg(simulation.mesh, simulation.inner_regions)
+    @inject.params(simulation=Simulation, field_solver_class=FieldSolver, output_writer=OutputWriterNone)
+    def __init__(self, simulation, field_solver_class=None, output_writer=OutputWriterNone()):
         self.output_writer = output_writer
         self.simulation = simulation
-        self.solver = solver
+        self.solver = field_solver_class(simulation.mesh, simulation.inner_regions)
 
     def start(self):
         self.eval_and_write_fields_without_particles()

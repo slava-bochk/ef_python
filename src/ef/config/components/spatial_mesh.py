@@ -1,3 +1,7 @@
+from typing import Type
+
+import inject
+
 from ef.field.on_grid import FieldOnGrid
 from ef.meshgrid import MeshGrid
 from ef.util.array_on_grid import ArrayOnGrid
@@ -25,11 +29,12 @@ class SpatialMeshConf(ConfigComponent):
         x, y, z = self.step
         return SpatialMeshSection(X, x, Y, y, Z, z)
 
-    def make(self):
+    @inject.params(array_class=ArrayOnGrid)
+    def make(self, array_class: Type[ArrayOnGrid]):
         grid = MeshGrid.from_step(self.size, self.step)
-        charge_density = ArrayOnGrid(grid)
-        potential = ArrayOnGrid(grid)
-        electric_field = FieldOnGrid('spatial_mesh', 'electric', ArrayOnGrid(grid, 3))
+        charge_density = array_class(grid)
+        potential = array_class(grid)
+        electric_field = FieldOnGrid('spatial_mesh', 'electric', array_class(grid, 3))
         return grid, charge_density, potential, electric_field
 
 

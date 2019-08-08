@@ -3,6 +3,7 @@ import subprocess
 from os.path import basename
 from shutil import copytree, copy
 
+import inject
 import pytest
 
 from ef.config.config import Config
@@ -33,6 +34,7 @@ def test_example_conf(fname, mocker, capsys, tmpdir, monkeypatch):
     main()
     out, err = capsys.readouterr()
     assert err == ""
+    inject.clear()
 
 
 def run_jupyter(dir, fname, path=None, copy_dir=False):
@@ -46,6 +48,7 @@ def run_jupyter(dir, fname, path=None, copy_dir=False):
         copytree(dir, path)
     ep = ExecutePreprocessor(timeout=600)
     ep.preprocess(nb, {'metadata': {'path': path}} if path is not None else {})
+    inject.clear()
 
 
 @pytest.mark.slowish

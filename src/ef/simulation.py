@@ -19,7 +19,7 @@ from ef.util.serializable_h5 import SerializableH5
 def is_trivial(potential: ArrayOnGrid, inner_regions: List[InnerRegion]):
     if not potential.is_the_same_on_all_boundaries:
         return False
-    return len({potential.data[0, 0, 0]} | {ir.potential for ir in inner_regions}) == 1
+    return len({float(potential.data[0, 0, 0])} | {ir.potential for ir in inner_regions}) == 1
 
 
 class Simulation(SerializableH5):
