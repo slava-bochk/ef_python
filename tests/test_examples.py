@@ -52,37 +52,37 @@ def run_jupyter(dir, fname, path=None, copy_dir=False):
 
 
 @pytest.mark.slowish
-@pytest.mark.jupyter
+@pytest.mark.jupyter_examples
 def test_all_examples_visualize():
     run_jupyter("examples/jupyter", "visualize_examples.ipynb", 'examples/jupyter/')
 
 
 @pytest.mark.slow
-@pytest.mark.jupyter
+@pytest.mark.jupyter_examples
 def test_axially_symmetric_beam_contour(tmpdir):
     run_jupyter("examples/axially_symmetric_beam_contour", "axially_symmetric_beam_contour.ipynb", tmpdir)
 
 
 @pytest.mark.slow
-@pytest.mark.jupyter
+@pytest.mark.jupyter_examples
 def test_drift_tube_potential(tmpdir):
     run_jupyter("examples/drift_tube_potential", "potential.ipynb", tmpdir.join('newdir'), True)
 
 
 @pytest.mark.slow
-@pytest.mark.jupyter
+@pytest.mark.jupyter_examples
 def test_ribbon_beam_contour(tmpdir):
     run_jupyter("examples/ribbon_beam_contour", "beam.ipynb", tmpdir.join('newdir'), True)
 
 
 @pytest.mark.slow
-@pytest.mark.jupyter
+@pytest.mark.jupyter_examples
 def test_tube_source(tmpdir):
     run_jupyter("examples/tube_source_test", "plot.ipynb", tmpdir.join('newdir'), True)
 
 
 @pytest.mark.slowish
-@pytest.mark.jupyter
+@pytest.mark.jupyter_examples
 def test_single_particle_in_free_space(tmpdir):
     run_jupyter("examples/single_particle_in_free_space", "single_particle_in_free_space.ipynb",
                 tmpdir.join('newdir'), True)
@@ -91,20 +91,20 @@ def test_single_particle_in_free_space(tmpdir):
 
 
 @pytest.mark.slowish
-@pytest.mark.jupyter
+@pytest.mark.jupyter_examples
 def test_single_particle_in_uniform_electric_field(tmpdir):
     run_jupyter("examples/single_particle_in_electric_field", "single_particle_in_uniform_electric_field.ipynb",
                 tmpdir)
 
 
 @pytest.mark.slowish
-@pytest.mark.jupyter
+@pytest.mark.jupyter_examples
 def test_single_particle_in_radial_electric_field(tmpdir):
     run_jupyter("examples/single_particle_in_radial_electric_field", "plot.ipynb", tmpdir.join('newdir'), True)
 
 
 @pytest.mark.slow
-@pytest.mark.jupyter
+@pytest.mark.jupyter_examples
 def test_particle_in_magnetic_field(tmpdir):
     run_jupyter("examples/single_particle_in_magnetic_field", "Single Particle in Uniform Magnetic Field.ipynb", tmpdir)
     run_jupyter("examples/single_particle_in_magnetic_field", "single_particle_in_magnetic_field.ipynb",
