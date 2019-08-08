@@ -1,13 +1,16 @@
 import numpy as np
 
 from ef.field import Field
+from ef.field.on_grid import FieldOnGrid
 from ef.inner_region import InnerRegion
+from ef.meshgrid import MeshGrid
 from ef.particle_array import ParticleArray
 from ef.particle_interaction_model import Model
 from ef.particle_source import ParticleSource
+from ef.particle_tracker import ParticleTracker
 from ef.simulation import Simulation
-from ef.spatial_mesh import SpatialMesh
 from ef.time_grid import TimeGrid
+from ef.util.array_on_grid import ArrayOnGrid
 
 
 class Reader:
@@ -17,7 +20,7 @@ class Reader:
             return 'cpp'
         elif 'history' in h5file:
             return 'history'
-        elif 'spat_mesh' in h5file:
+        elif 'time_grid' in h5file:
             return 'python'
         else:
             raise ValueError('Cannot guess hdf5 file format')
@@ -40,14 +43,21 @@ class Reader:
         sources = [ParticleSource.import_h5(g) for g in h5file['ParticleSources'].values()]
         particles = [ParticleArray.import_h5(g) for g in h5file['ParticleSources'].values()]
         max_id = int(np.max([p.ids for p in particles], initial=-1))
+        g = h5file['SpatialMesh']
+        mesh = MeshGrid.import_h5(g)
+        charge = ArrayOnGrid(mesh, (), np.reshape(g['charge_density'], mesh.n_nodes))
+        potential = ArrayOnGrid(mesh, (), np.reshape(g['potential'], mesh.n_nodes))
+        field = FieldOnGrid('spatial_mesh', 'electric', ArrayOnGrid(mesh, 3, np.moveaxis(
+            np.array([np.reshape(g['electric_field_{}'.format(c)], mesh.n_nodes) for c in 'xyz']),
+            0, -1)))
         return Simulation(
             time_grid=TimeGrid.import_h5(h5file['TimeGrid']),
-            spat_mesh=SpatialMesh.import_h5(h5file['SpatialMesh']),
+            mesh=mesh, charge_density=charge, potential=potential, electric_field=field,
             inner_regions=[InnerRegion.import_h5(g) for g in h5file['InnerRegions'].values()],
             electric_fields=[f for f in fields if f.electric_or_magnetic == 'electric'],
             magnetic_fields=[f for f in fields if f.electric_or_magnetic == 'magnetic'],
             particle_interaction_model=Model[
                 h5file['ParticleInteractionModel'].attrs['particle_interaction_model'].decode('utf8')
             ],
-            particle_sources=sources, particle_arrays=particles, max_id=max_id
+            particle_sources=sources, particle_arrays=particles, particle_tracker=ParticleTracker(max_id)
         )

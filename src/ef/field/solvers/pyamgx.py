@@ -38,9 +38,9 @@ class FieldSolverPyamgx(FieldSolver):
         self._solver = pyamgx.Solver().create(self.resources, self.cfg)
         self._solver.setup(self._matrix)
 
-    def solve_poisson_eqn(self):
-        self.init_rhs_vector()
+    def solve_poisson_eqn(self, charge_density, potential):
+        self.init_rhs_vector(charge_density, potential)
         self._rhs.upload(self.rhs)
         self._solver.solve(self._rhs, self._phi_vec)
         self.phi_vec = self._phi_vec.download()
-        self.transfer_solution_to_spat_mesh()
+        self.transfer_solution_to_spat_mesh(potential)

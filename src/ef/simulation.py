@@ -1,27 +1,40 @@
 from collections import defaultdict
+from typing import List
 
 import numpy as np
 
+from ef.config.components import Box
 from ef.field import FieldZero, FieldSum
+from ef.field.on_grid import FieldOnGrid
 from ef.field.particles import FieldParticles
+from ef.inner_region import InnerRegion
+from ef.meshgrid import MeshGrid
 from ef.particle_array import ParticleArray
 from ef.particle_interaction_model import Model
+from ef.particle_tracker import ParticleTracker
+from ef.util.array_on_grid import ArrayOnGrid
 from ef.util.serializable_h5 import SerializableH5
 
 
-def is_trivial(spat_mesh, inner_regions):
-    if not spat_mesh.is_potential_equal_on_boundaries():
+def is_trivial(potential: ArrayOnGrid, inner_regions: List[InnerRegion]):
+    if not potential.is_the_same_on_all_boundaries:
         return False
-    return len({spat_mesh.potential[0, 0, 0]} | {ir.potential for ir in inner_regions}) == 1
+    return len({potential.data[0, 0, 0]} | {ir.potential for ir in inner_regions}) == 1
 
 
 class Simulation(SerializableH5):
-    def __init__(self, time_grid, spat_mesh, inner_regions,
+    def __init__(self, time_grid,
+                 mesh: MeshGrid, charge_density: ArrayOnGrid, potential: ArrayOnGrid, electric_field: FieldOnGrid,
+                 inner_regions: List[InnerRegion],
                  particle_sources,
                  electric_fields, magnetic_fields, particle_interaction_model,
-                 max_id=-1, particle_arrays=()):
+                 particle_tracker=None, particle_arrays=()):
         self.time_grid = time_grid
-        self.spat_mesh = spat_mesh
+        self.mesh = mesh
+        self.charge_density = charge_density
+        self.potential = potential
+        self.electric_field = electric_field
+        self._domain = InnerRegion('simulation_domain', Box(0, mesh.size), inverted=True)
         self.inner_regions = inner_regions
         self.particle_sources = particle_sources
         self.electric_fields = FieldSum.factory(electric_fields, 'electric')
@@ -32,29 +45,27 @@ class Simulation(SerializableH5):
 
         if self.particle_interaction_model == Model.binary:
             self._dynamic_field = FieldParticles('binary_particle_field', self.particle_arrays)
-            if not is_trivial(spat_mesh, inner_regions):
-                self._dynamic_field += self.spat_mesh
+            if not is_trivial(potential, inner_regions):
+                self._dynamic_field += self.electric_field
         elif self.particle_interaction_model == Model.noninteracting:
-            if not is_trivial(spat_mesh, inner_regions):
-                self._dynamic_field = self.spat_mesh
+            if not is_trivial(potential, inner_regions):
+                self._dynamic_field = self.electric_field
             else:
                 self._dynamic_field = FieldZero('Uniform_potential_zero_field', 'electric')
         else:
-            self._dynamic_field = self.spat_mesh
+            self._dynamic_field = self.electric_field
 
-        self.max_id = max_id
+        self.particle_tracker = ParticleTracker() if particle_tracker is None else particle_tracker
 
     def advance_one_time_step(self, field_solver):
         self.push_particles()
         self.generate_and_prepare_particles(field_solver)
-        self.update_time_grid()
+        self.time_grid.update_to_next_step()
 
     def eval_charge_density(self):
-        self.spat_mesh.clear_old_density_values()
-        self.spat_mesh.weight_particles_charge_to_mesh(self.particle_arrays)
-
-    def eval_potential_and_field(self, field_solver):
-        field_solver.eval_potential_and_field()
+        self.charge_density.reset()
+        for p in self.particle_arrays:
+            self.charge_density.distribute_at_positions(p.charge, p.positions)
 
     def push_particles(self):
         self.boris_integration(self.time_grid.time_step_size)
@@ -63,7 +74,8 @@ class Simulation(SerializableH5):
         self.generate_valid_particles(initial)
         if self.particle_interaction_model == Model.PIC:
             self.eval_charge_density()
-            self.eval_potential_and_field(field_solver)
+            field_solver.eval_potential(self.charge_density, self.potential)
+            self.electric_field.array = self.potential.gradient()
         self.shift_new_particles_velocities_half_time_step_back()
         self.consolidate_particle_arrays()
 
@@ -101,18 +113,13 @@ class Simulation(SerializableH5):
         return total_el_field.get_at_points(positions, self.time_grid.current_time), \
                self.magnetic_fields.get_at_points(positions, self.time_grid.current_time)
 
-    def binary_electric_field_at_positions(self, positions):
-        return sum(
-            np.nan_to_num(p.field_at_points(positions)) for p in self.particle_arrays)
-
     def shift_new_particles_velocities_half_time_step_back(self):
         minus_half_dt = -1.0 * self.time_grid.time_step_size / 2.0
         self.prepare_boris_integration(minus_half_dt)
 
     def apply_domain_boundary_conditions(self):
         for arr in self.particle_arrays:
-            collisions = self.out_of_bound(arr)
-            arr.remove(collisions)
+            self._domain.collide_with_particles(arr)
         self.particle_arrays = [a for a in self.particle_arrays if len(a.ids) > 0]
 
     def remove_particles_inside_inner_regions(self):
@@ -121,24 +128,12 @@ class Simulation(SerializableH5):
                 region.collide_with_particles(p)
             self.particle_arrays = [a for a in self.particle_arrays if len(a.ids) > 0]
 
-    def out_of_bound(self, particle):
-        return np.logical_or(np.any(particle.positions < 0, axis=-1),
-                             np.any(particle.positions > self.spat_mesh.size, axis=-1))
-
     def generate_new_particles(self, initial=False):
         for src in self.particle_sources:
             particles = src.generate_initial_particles() if initial else src.generate_each_step()
             if len(particles.ids):
-                particles.ids = self.generate_particle_ids(len(particles.ids))
+                particles.ids = self.particle_tracker.generate_particle_ids(len(particles.ids))
                 self.particle_arrays.append(particles)
-
-    def generate_particle_ids(self, num_of_particles):
-        range_of_ids = range(self.max_id + 1, self.max_id + num_of_particles + 1)
-        self.max_id += num_of_particles
-        return np.array(range_of_ids)
-
-    def update_time_grid(self):
-        self.time_grid.update_to_next_step()
 
     def consolidate_particle_arrays(self):
         particles_by_type = defaultdict(list)

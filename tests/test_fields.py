@@ -1,11 +1,18 @@
+from math import sqrt
+
 import numpy as np
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 from pytest import raises
 
 from ef.field import Field, FieldSum, FieldZero
 from ef.field.expression import FieldExpression
+from ef.field.from_csv import FieldFromCSVFile
 from ef.field.on_grid import FieldOnGrid
+from ef.field.particles import FieldParticles
 from ef.field.uniform import FieldUniform
+from ef.meshgrid import MeshGrid
+from ef.particle_array import ParticleArray
+from ef.util.array_on_grid import ArrayOnGrid
 
 
 class TestFields:
@@ -67,11 +74,30 @@ class TestFields:
         assert_array_equal(f.get_at_points((1, 2, 3), 5.), (4, -1, 7))
         assert_array_equal(f.get_at_points((3, 2, 1), 5.), (4, 5, 5))
 
+    def test_on_grid(self):
+        f = FieldOnGrid('f1', 'electric', ArrayOnGrid(MeshGrid(5, 6), 3, np.full((6, 6, 6, 3), -3.14)))
+        assert_array_equal(f.get_at_points([(-1, 0, 0), (1, 2, 3.5)], 1), [(0, 0, 0), (-3.14, -3.14, -3.14)])
+        with raises(ValueError):
+            FieldOnGrid('f1', 'electric', ArrayOnGrid(MeshGrid(5, 6)))
+
     def test_from_file(self):
-        f = FieldOnGrid('f1', 'electric', 'tests/test_field.csv')
+        f = FieldFromCSVFile('f1', 'electric', 'tests/test_field.csv')
         assert_array_equal(f.get_at_points([(0, 0, 0), (1, 1, 1), (1, 0, 1), (.5, .5, .5)], 0),
                            [(1, 1, 1), (-1, -1, -1), (3, 2, 1), (1, 1, 1)])
         assert_array_equal(f.get_at_points([(0, 0, 0), (1, 1, 1), (1, 0, 1), (.5, .5, .5)], 10.),
                            [(1, 1, 1), (-1, -1, -1), (3, 2, 1), (1, 1, 1)])
         assert_array_almost_equal(f.get_at_points([(.5, 1., .3), (0, .5, .7)], 5), [(0., .5, 1.), (1, 1.5, 2)])
         assert_array_equal(f.get_at_points([(-1, 1., .3), (1, 1, 10)], 3), [(0, 0, 0), (0, 0, 0)])
+
+    def test_binary(self):
+        f = FieldParticles('f', [ParticleArray(1, -1, 1, [(1, 2, 3)], [(-2, 2, 0)], False)])
+        assert_array_almost_equal(f.get_at_points((1, 2, 3), 0), [(0, 0, 0)])
+        assert_array_almost_equal(f.get_at_points((1, 2, 4), 0), [(0, 0, -1)])
+        assert_array_almost_equal(f.get_at_points((0, 2, 3), 0), [(1, 0, 0)])
+        assert_array_almost_equal(f.get_at_points((0, 1, 2), 0),
+                                  [(1 / sqrt(27), 1 / sqrt(27), 1 / sqrt(27))])
+        f = FieldParticles('f', [ParticleArray(2, -1, 1, [(1, 2, 3), (1, 2, 3)], [(-2, 2, 0), (0, 0, 0)], False),
+                                 ParticleArray(2, -1, 1, [(1, 2, 3), (1, 2, 3)], [(-2, 2, 0), (0, 0, 0)], False)])
+        assert_array_almost_equal(f.get_at_points(
+            [(1, 2, 3), (1, 2, 4), (0, 2, 3), (0, 1, 2)], 0),
+            [(0, 0, 0), (0, 0, -4), (4, 0, 0), (4 / sqrt(27), 4 / sqrt(27), 4 / sqrt(27))])

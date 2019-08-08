@@ -36,8 +36,8 @@ def main():
     if is_config:
         conf = read_conf(parser_or_h5_filename, args.prefix, args.suffix, args.output_format)
         sim = conf.make()
-        writer = conf.make_writer()
-        Runner(sim, solver_class(sim.spat_mesh, sim.inner_regions), writer).start()
+        writer = conf.output_file.make()
+        Runner(sim, solver_class(sim.mesh, sim.inner_regions), writer).start()
     else:
         print("Continuing from h5 file:", parser_or_h5_filename)
         prefix, suffix = merge_h5_prefix_suffix(parser_or_h5_filename, args.prefix, args.suffix)
@@ -45,7 +45,7 @@ def main():
         with h5py.File(parser_or_h5_filename, 'r') as h5file:
             sim = Reader.read_simulation(h5file)
         writer = OutputFileConf(prefix, suffix, args.output_format).make()
-        Runner(sim, solver_class(sim.spat_mesh, sim.inner_regions), writer).continue_()
+        Runner(sim, solver_class(sim.mesh, sim.inner_regions), writer).continue_()
     del sim
     return 0
 

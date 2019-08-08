@@ -21,6 +21,10 @@ class BoundaryConditionsConf(ConfigComponent):
         else:
             raise ValueError("Wrong number of arguments to BoundaryConditions.__init__()", len(provided_args))
 
+    @property
+    def is_the_same_on_all_boundaries(self):
+        return self.right == self.left == self.bottom == self.top == self.near == self.far
+
     def to_conf(self):
         return BoundaryConditionsSection(self.right, self.left, self.bottom, self.top, self.near, self.far)
 

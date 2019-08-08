@@ -9,13 +9,15 @@ from ef.config.components import *
 from ef.config.config import Config
 from ef.field import FieldZero
 from ef.field.expression import FieldExpression
+from ef.field.on_grid import FieldOnGrid
 from ef.field.uniform import FieldUniform
 from ef.inner_region import InnerRegion
+from ef.meshgrid import MeshGrid
 from ef.particle_array import ParticleArray
 from ef.particle_interaction_model import Model
 from ef.runner import Runner
-from ef.spatial_mesh import SpatialMesh
 from ef.time_grid import TimeGrid
+from ef.util.array_on_grid import ArrayOnGrid
 
 
 class TestSimulation:
@@ -39,7 +41,11 @@ class TestSimulation:
         parser.read_string(efconf.export_to_string())
         sim = Config.from_configparser(parser).make()
         assert sim.time_grid == TimeGrid(100, 1, 10)
-        assert sim.spat_mesh == SpatialMesh.do_init((10, 10, 10), (1, 1, 1), BoundaryConditionsConf(0))
+        g = MeshGrid(10, 11)
+        assert sim.mesh == g
+        assert sim.potential == ArrayOnGrid(g)
+        assert sim.charge_density == ArrayOnGrid(g)
+        assert sim.electric_field == FieldOnGrid('spatial_mesh', 'electric', ArrayOnGrid(g, 3))
         assert sim.inner_regions == []
         assert sim.particle_sources == []
         assert sim.electric_fields == FieldZero('ZeroSum', 'electric')
@@ -53,7 +59,12 @@ class TestSimulation:
         conf = Config.from_configparser(parser)
         sim = conf.make()
         assert sim.time_grid == TimeGrid(200, 2, 20)
-        assert sim.spat_mesh == SpatialMesh.do_init((5, 5, 5), (.1, .1, .1), BoundaryConditionsConf(-2.7))
+        assert sim.mesh == MeshGrid(5, 51)
+        assert sim.electric_field == FieldOnGrid('spatial_mesh', 'electric', ArrayOnGrid(sim.mesh, 3))
+        assert sim.charge_density == ArrayOnGrid(sim.mesh)
+        expected = np.full((51, 51, 51), -2.7)
+        expected[1:-1, 1:-1, 1:-1] = 0
+        assert sim.potential == ArrayOnGrid(sim.mesh, (), expected)
         assert sim.inner_regions == [InnerRegion('1', Box(), 1),
                                      InnerRegion('2', Sphere(), -2),
                                      InnerRegion('3', Cylinder(), 0),
@@ -64,20 +75,6 @@ class TestSimulation:
         assert sim.electric_fields == FieldUniform('x', 'electric', np.array((-2, -2, 1)))
         assert sim.magnetic_fields == FieldExpression('y', 'magnetic', '0', '0', '3*x + sqrt(y) - z**2')
         assert sim.particle_interaction_model == Model.binary
-
-    def test_binary_field(self):
-        d = Config().make()
-        d.particle_arrays = [ParticleArray(1, -1, 1, [(1, 2, 3)], [(-2, 2, 0)], False)]
-        assert_array_almost_equal(d.binary_electric_field_at_positions((1, 2, 3)), [(0, 0, 0)])
-        assert_array_almost_equal(d.binary_electric_field_at_positions((1, 2, 4)), [(0, 0, -1)])
-        assert_array_almost_equal(d.binary_electric_field_at_positions((0, 2, 3)), [(1, 0, 0)])
-        assert_array_almost_equal(d.binary_electric_field_at_positions((0, 1, 2)),
-                                  [(1 / sqrt(27), 1 / sqrt(27), 1 / sqrt(27))])
-        d.particle_arrays = [ParticleArray(2, -1, 1, [(1, 2, 3), (1, 2, 3)], [(-2, 2, 0), (0, 0, 0)], False),
-                             ParticleArray(2, -1, 1, [(1, 2, 3), (1, 2, 3)], [(-2, 2, 0), (0, 0, 0)], False)]
-        assert_array_almost_equal(d.binary_electric_field_at_positions(
-            [(1, 2, 3), (1, 2, 4), (0, 2, 3), (0, 1, 2)]),
-            [(0, 0, 0), (0, 0, -4), (4, 0, 0), (4 / sqrt(27), 4 / sqrt(27), 4 / sqrt(27))])
 
     @pytest.mark.parametrize('model', ['noninteracting', 'PIC', 'binary'])
     def test_cube_of_gas(self, model):

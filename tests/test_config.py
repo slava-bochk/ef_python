@@ -63,3 +63,18 @@ class TestPrint:
 
 def test_potentials():
     assert Config().get_potentials() == [0., 0., 0., 0., 0., 0.]
+
+
+def test_is_trivial():
+    assert BoundaryConditionsConf().is_the_same_on_all_boundaries
+    assert BoundaryConditionsConf(3.14).is_the_same_on_all_boundaries
+    assert not BoundaryConditionsConf(*range(6)).is_the_same_on_all_boundaries
+    assert not BoundaryConditionsConf(-1, 1, 1, 1, 1, 1).is_the_same_on_all_boundaries
+    assert Config().is_trivial()
+    assert Config(boundary_conditions=BoundaryConditionsConf(1)).is_trivial()
+    assert not Config(boundary_conditions=BoundaryConditionsConf(1, 1, 1, 2, 1, 1)).is_trivial()
+    assert Config(inner_regions=[InnerRegionConf(), InnerRegionConf()]).is_trivial()
+    assert Config(inner_regions=[InnerRegionConf(potential=-2), InnerRegionConf(potential=-2)],
+                  boundary_conditions=BoundaryConditionsConf(-2)).is_trivial()
+    assert not Config(inner_regions=[InnerRegionConf(potential=1)]).is_trivial()
+    assert not Config(inner_regions=[InnerRegionConf(potential=1), InnerRegionConf(potential=0)]).is_trivial()

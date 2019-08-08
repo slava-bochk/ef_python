@@ -102,17 +102,21 @@ class Config(DataClass):
 
     def make(self):
         grid = self.time_grid.make()
-        mesh = self.spatial_mesh.make(self.boundary_conditions)
+        mesh, charge, potential, electric_field = self.spatial_mesh.make()
+        potential.apply_boundary_values(self.boundary_conditions)
         regions = [ir.make() for ir in self.inner_regions]
         sources = [s.make() for s in self.sources]
         fields = [f.make() for f in self.external_fields]
         electric_fields = [f for f in fields if f.electric_or_magnetic == 'electric']
         magnetic_fields = [f for f in fields if f.electric_or_magnetic == 'magnetic']
         model = self.particle_interaction_model.make()
-        return simulation.Simulation(grid, mesh, regions, sources, electric_fields, magnetic_fields, model)
+        return simulation.Simulation(grid, mesh, charge, potential, electric_field,
+                                     regions, sources, electric_fields, magnetic_fields, model)
 
-    def make_writer(self):
-        return self.output_file.make()
+    def is_trivial(self):
+        if not self.boundary_conditions.is_the_same_on_all_boundaries:
+            return False
+        return len({self.boundary_conditions.right} | {ir.potential for ir in self.inner_regions}) == 1
 
 
 def main():

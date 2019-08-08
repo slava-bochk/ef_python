@@ -41,7 +41,7 @@ class DataClass:
             w = other.dict[k]
             if isinstance(v, np.ndarray) or isinstance(w, np.ndarray):
                 assert np.asarray(v).shape == np.asarray(w).shape, k
-                assert_array_equal(v, w)
+                assert_array_equal(v, w, k)
             elif isinstance(v, DataClass):
                 v.assert_eq(w)
             else:
