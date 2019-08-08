@@ -90,23 +90,10 @@ def rotation_from_z(vector):
 class Box(Shape):
     def __init__(self, origin=(0, 0, 0), size=(1, 1, 1)):
         super().__init__()
-        self._origin = self.xp.asarray(vector(origin))
-        self._size = self.xp.asarray(vector(size))
-
-    @property
-    def dict(self):
-        d = super().dict
-        d["origin"] = self.origin
-        d["size"] = self.size
-        return d
-
-    @property
-    def origin(self):
-        return self._origin.get() if hasattr(self._origin, 'get') else self._origin
-
-    @property
-    def size(self):
-        return self._size.get() if hasattr(self._size, 'get') else self._size
+        self.origin = vector(origin)
+        self.size = vector(size)
+        self._origin = self.xp.asarray(self.origin)
+        self._size = self.xp.asarray(self.size)
 
     def visualize(self, visualizer, **kwargs):
         visualizer.draw_box(self.size, self.origin, **kwargs)
@@ -141,25 +128,12 @@ class Box(Shape):
 class Cylinder(Shape):
     def __init__(self, start=(0, 0, 0), end=(1, 0, 0), radius=1):
         super().__init__()
-        self._start = self.xp.asarray(vector(start))
-        self._end = self.xp.asarray(vector(end))
+        self.start = vector(start)
+        self.end = vector(end)
+        self._start = self.xp.asarray(self.start)
+        self._end = self.xp.asarray(self.end)
         self.radius = float(radius)
         self._rotation = rotation_from_z(self.end - self.start)
-
-    @property
-    def dict(self):
-        d = super().dict
-        d["start"] = self.start
-        d["end"] = self.end
-        return d
-
-    @property
-    def start(self):
-        return self._start.get() if hasattr(self._start, 'get') else self._start
-
-    @property
-    def end(self):
-        return self._end.get() if hasattr(self._end, 'get') else self._end
 
     def visualize(self, visualizer, **kwargs):
         visualizer.draw_cylinder(self.start, self.end, self.radius, **kwargs)
@@ -205,26 +179,13 @@ class Cylinder(Shape):
 class Tube(Shape):
     def __init__(self, start=(0, 0, 0), end=(1, 0, 0), inner_radius=1, outer_radius=2):
         super().__init__()
-        self._start = self.xp.asarray(vector(start))
-        self._end = self.xp.asarray(vector(end))
+        self.start = vector(start)
+        self.end = vector(end)
+        self._start = self.xp.asarray(self.start)
+        self._end = self.xp.asarray(self.end)
         self.inner_radius = float(inner_radius)
         self.outer_radius = float(outer_radius)
         self._rotation = rotation_from_z(self.end - self.start)
-
-    @property
-    def dict(self):
-        d = super().dict
-        d["start"] = self.start
-        d["end"] = self.end
-        return d
-
-    @property
-    def start(self):
-        return self._start.get() if hasattr(self._start, 'get') else self._start
-
-    @property
-    def end(self):
-        return self._end.get() if hasattr(self._end, 'get') else self._end
 
     def visualize(self, visualizer, **kwargs):
         visualizer.draw_tube(self.start, self.end, self.inner_radius, self.outer_radius, **kwargs)
@@ -274,19 +235,22 @@ class Tube(Shape):
 class Sphere(Shape):
     def __init__(self, origin=(0, 0, 0), radius=1):
         super().__init__()
-        self.origin = np.array(origin)
+        self.origin = vector(origin)
+        self._origin = self.xp.asarray(self.origin)
         self.radius = float(radius)
 
     def visualize(self, visualizer, **kwargs):
         visualizer.draw_sphere(self.origin, self.radius, **kwargs)
 
     def are_positions_inside(self, positions):
-        return norm(positions - self.origin, axis=-1) <= self.radius
+        positions = self.xp.asarray(positions)
+        return self.xp.linalg.norm(positions - self._origin, axis=-1) <= self.radius
 
     def generate_uniform_random_posititons(self, random_state, n):
         while True:
             p = random_state.uniform(-1, 1, (n * 2, 3)) * self.radius + self.origin
-            p = p.compress(self.are_positions_inside(p), 0)
+            mask = self.are_positions_inside(p)
+            p = p.compress(mask.get() if hasattr(mask, 'get') else mask, 0)
             if len(p) > n:
                 return p[:n]
 

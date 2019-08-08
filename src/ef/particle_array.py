@@ -12,29 +12,30 @@ class ParticleArray(SerializableH5):
 
     @safe_default_inject
     def __init__(self, ids, charge, mass, positions, momentums, momentum_is_half_time_step_shifted=False):
-        self.ids = numpy.array(ids)
+        self.ids = self.xp.asarray(ids)
         self.charge = charge
         self.mass = mass
-        self.positions = self.xp.array(positions)
-        self.momentums = self.xp.array(momentums)
+        self.positions = self.xp.asarray(positions).reshape((-1, 3))
+        self.momentums = self.xp.asarray(momentums).reshape((-1, 3))
         self.momentum_is_half_time_step_shifted = momentum_is_half_time_step_shifted
 
     @property
     def dict(self):
         d = super().dict
         if self.xp is not numpy:
+            d['ids'] = d['ids'].get()
             d['positions'] = d['positions'].get()
             d['momentums'] = d['momentums'].get()
         return d
 
     def keep(self, mask):
-        mask = self.xp.array(mask)
-        self.ids = self.ids[mask.get()].flatten() if hasattr(mask, 'get') else self.ids[mask].flatten()
+        mask = self.xp.asarray(mask)
+        self.ids = self.ids[mask]
         self.positions = self.positions[mask]
         self.momentums = self.momentums[mask]
 
     def remove(self, mask):
-        mask = self.xp.array(mask)
+        mask = self.xp.asarray(mask)
         self.keep(self.xp.logical_not(mask))
 
     def update_positions(self, dt):
@@ -67,8 +68,8 @@ class ParticleArray(SerializableH5):
                    momentum_is_half_time_step_shifted=True)
 
     def export_h5(self, g):
-        g['particle_id'] = self.ids
-        g.attrs['max_id'] = self.ids.max(initial=-1)
+        g['particle_id'] = self.dict['ids']
+        g.attrs['max_id'] = self.dict['ids'].max(initial=-1)
         for i, c in enumerate('xyz'):
             g['position_{}'.format(c)] = self.dict['positions'][:, i]
             g['momentum_{}'.format(c)] = self.dict['momentums'][:, i]

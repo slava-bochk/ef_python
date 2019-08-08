@@ -37,7 +37,7 @@ class TestParticle:
         self.assert_ae(p.field_at_points((2., 0., 1.)), self.xp.array([(-4, 0, 0)]))
         self.assert_ae(p.field_at_points(self.xp.array((2., 0., 1.))), [(-4, 0, 0)])
         self.assert_ae(p.field_at_points((0., 0., 1.)), self.xp.array([[0, 0, 0]]))
-        p = ParticleArray('12', -16.0, 2.0, [(0, 0, 1), (0, 0, 0)], self.xp.zeros((2, 3)))
+        p = ParticleArray((1, 2), -16.0, 2.0, [(0, 0, 1), (0, 0, 0)], self.xp.zeros((2, 3)))
         self.assert_ae(p.field_at_points((0, 0, 0.5)), [(0, 0, 0)])
         self.assert_ae(p.field_at_points((0, 0, 2)), [(0, 0, -20)])
         self.assert_ae(p.field_at_points((0., 0., 0)), self.xp.array([[0, 0, 16]]))
@@ -47,16 +47,16 @@ class TestParticle:
     def test_update_momentums_no_mgn(self):
         p = ParticleArray(123, -1.0, 2.0, (0., 0., 1.), (1., 0., 3.))
         p.boris_update_momentum_no_mgn(0.1, (-1.0, 2.0, 3.0))
-        self.assert_ae(p.momentums, (1.1, -0.2, 2.7))
+        self.assert_ae(p.momentums, [(1.1, -0.2, 2.7)])
 
     def test_update_momentums(self):
         p = ParticleArray(123, -1.0, 2.0, (0., 0., 1.), (1., 0., 3.))
         p.boris_update_momentums(0.1, (-1.0, 2.0, 3.0), (0, 0, 0))
-        self.assert_ae(p.momentums, (1.1, -0.2, 2.7))
+        self.assert_ae(p.momentums, [(1.1, -0.2, 2.7)])
 
         p = ParticleArray(123, -1.0, 2.0, (0., 0., 1.), (1., 0., 3.))
         p.boris_update_momentums(2, (-1.0, 2.0, 3.0), (2 * speed_of_light, 0, 0))
-        self.assert_ae(p.momentums, (3, -2, -5))
+        self.assert_ae(p.momentums, [(3, -2, -5)])
 
     def test_update_momentums_function(self):
         self.assert_ae(ParticleArray._boris_update_momentums(-1, 2, (1, 0, 3), 0.1, (-1.0, 2.0, 3.0), (0, 0, 0)),

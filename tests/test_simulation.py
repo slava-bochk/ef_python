@@ -107,7 +107,7 @@ class TestSimulation:
         Runner(sim).start()
         assert len(sim.particle_sources) == 2
         assert len(sim.particle_arrays) == 1
-        assert_array_equal(sim.particle_arrays[0].ids, range(100))
+        sim.particle_arrays[0].xp.testing.assert_array_equal(sim.particle_arrays[0].ids, range(100))
 
     def test_particle_generation(self, monkeypatch, tmpdir, backend_and_solver):
         monkeypatch.chdir(tmpdir)
