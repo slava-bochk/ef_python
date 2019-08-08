@@ -24,39 +24,31 @@ class FieldSolver:
 
     def construct_equation_matrix(self):
         nx, ny, nz = self.mesh.n_nodes - 2
+        size = nx * ny * nz
         cx, cy, cz = self.mesh.cell ** 2
         dx, dy, dz = cy * cz, cx * cz, cx * cy
-        matrix = dx * self.construct_d2dx2_in_3d(nx, ny, nz) + \
-                 dy * self.construct_d2dy2_in_3d(nx, ny, nz) + \
-                 dz * self.construct_d2dz2_in_3d(nx, ny, nz)
+        diag_dx = self.get_diag_d2dx2_in_3d(nx, ny, nz, dx)
+        diag_dy = self.get_diag_d2dy2_in_3d(nx, ny, nz, dy)
+        matrix = scipy.sparse.diags([-2.0 * (dx + dy + dz), diag_dx, diag_dx, diag_dy, diag_dy, dz, dz],
+                                    [0, -1, 1, -nx, nx, -nx * ny, nx * ny],
+                                    shape=(size, size), format='csr')
         return self.zero_nondiag_for_nodes_inside_objects(matrix)
 
     @staticmethod
-    def construct_d2dx2_in_3d(nx, ny, nz):
+    def get_diag_d2dx2_in_3d(nx, ny, nz, dx):
         diag_offset = 1
         block_size = nx
-        size = nx * ny * nz
-        ones = np.ones(block_size - diag_offset)
+        ones = np.full(block_size - diag_offset, dx)
         zeros = np.zeros(diag_offset)
-        diag = np.concatenate((*([ones, zeros] * (ny * nz - 1)), ones))
-        return scipy.sparse.diags([-2.0, diag, diag], [0, -1, 1], shape=(size, size), format='csr')
+        return np.concatenate([ones, zeros] * (ny * nz))[:-diag_offset]
 
     @staticmethod
-    def construct_d2dy2_in_3d(nx, ny, nz):
+    def get_diag_d2dy2_in_3d(nx, ny, nz, dy):
         diag_offset = nx
         block_size = nx * ny
-        size = nx * ny * nz
-        ones = np.ones(block_size - diag_offset)
+        ones = np.full(block_size - diag_offset, dy)
         zeros = np.zeros(diag_offset)
-        diag = np.concatenate((*([ones, zeros] * (nz - 1)), ones))
-        return scipy.sparse.diags([-2.0, diag, diag], [0, -diag_offset, diag_offset], shape=(size, size), format='csr')
-
-    @staticmethod
-    def construct_d2dz2_in_3d(nx, ny, nz):
-        diag_offset = nx * ny
-        block_size = nx * ny * nz
-        return scipy.sparse.diags([1.0, -2.0, 1.0], [-diag_offset, 0, diag_offset], shape=(block_size, block_size),
-                                  format='csr')
+        return np.concatenate([ones, zeros] * nz)[:-diag_offset]
 
     def generate_nodes_in_regions(self, inner_regions):
         ijk = self._double_index[:, 1:]
