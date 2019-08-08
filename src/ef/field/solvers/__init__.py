@@ -42,7 +42,7 @@ class FieldSolver:
                                  diag_dy, diag_dy,
                                  np.full(size - nx * ny, dz), np.full(size - nx * ny, dz)))
         matrix = scipy.sparse.coo_matrix((values, (i, j)), shape=(size, size))
-        return self.zero_nondiag_for_nodes_inside_objects(matrix.tocsr())
+        return self.zero_nondiag_for_nodes_inside_objects(matrix).tocsr()
 
     @staticmethod
     def get_diag_d2dx2_in_3d(nx, ny, nz, dx):
@@ -76,16 +76,14 @@ class FieldSolver:
         indices = n[inside]
         return indices, potential[indices]
 
-    def zero_nondiag_for_nodes_inside_objects(self, matrix):
-        for i in self.nodes_in_regions:
-            csr_row_start = matrix.indptr[i]
-            csr_row_end = matrix.indptr[i + 1]
-            for t in range(csr_row_start, csr_row_end):
-                if matrix.indices[t] != i:
-                    matrix.data[t] = 0
-                else:
-                    matrix.data[t] = 1
-        return matrix
+    def zero_nondiag_for_nodes_inside_objects(self, matrix: scipy.sparse.coo_matrix):
+        data = matrix.data
+        row = matrix.row
+        col = matrix.col
+        mask = np.any(row[np.newaxis, :] == self.nodes_in_regions[:, np.newaxis], axis=0)
+        data[mask] = 0.
+        data[np.logical_and(row == col, mask)] = 1.
+        return scipy.sparse.coo_matrix((data, (row, col)), shape=matrix.shape)
 
     def create_solver_and_preconditioner(self):
         raise NotImplementedError()

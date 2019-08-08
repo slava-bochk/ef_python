@@ -1,4 +1,5 @@
 import numpy as np
+import scipy
 from numpy.testing import assert_array_equal, assert_allclose
 from scipy.sparse import csr_matrix
 
@@ -88,7 +89,7 @@ class TestFieldSolver:
         mesh = MeshGrid.from_step((4, 6, 9), (1, 2, 3))
         solver = FieldSolver(mesh, [InnerRegion('test', Box((1, 2, 3), (1, 2, 3)), 3)])
 
-        a = csr_matrix(np.full((12, 12), 2))
+        a = scipy.sparse.coo_matrix(np.full((12, 12), 2))
         assert_array_equal(a.toarray(), [[2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
                                          [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
                                          [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
@@ -115,19 +116,18 @@ class TestFieldSolver:
                                               [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
                                               [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2]])
 
-        # TODO: check algorithm if on-diagonal zeros should turn into ones
-        a = csr_matrix(np.array([[4, 0, 3, 0, 0, 0, 0, 2, 0, 0, 0, 0],
-                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0],
-                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                 [0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0],
-                                 [0, 0, 2, 0, 0, 3, 0, 0, 0, 0, 0, 0],
-                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                 [0, 0, 2, 0, 0, 0, 0, 0, 0, 1, 0, 0],
-                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
-                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                 [0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 6, 0],
-                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]))
+        a = scipy.sparse.coo_matrix(np.array([[4, 0, 3, 0, 0, 0, 0, 2, 0, 0, 0, 0],
+                                               [0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0],
+                                               [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                               [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                               [0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0],
+                                               [0, 0, 2, 0, 0, 3, 0, 0, 0, 0, 0, 0],
+                                               [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                               [0, 0, 2, 0, 0, 0, 0, 0, 0, 1, 0, 0],
+                                               [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
+                                               [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                               [0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 6, 0],
+                                               [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]))
         result = solver.zero_nondiag_for_nodes_inside_objects(a)
         assert_array_equal(result.toarray(), [[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                               [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
