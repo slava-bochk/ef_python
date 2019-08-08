@@ -35,18 +35,21 @@ class FieldSolver:
     def construct_d2dx2_in_3d(nx, ny, nz):
         diag_offset = 1
         block_size = nx
-        block = scipy.sparse.diags([1.0, -2.0, 1.0], [-diag_offset, 0, diag_offset], shape=(block_size, block_size),
-                                   format='coo')
-        big_block = scipy.sparse.block_diag([block] * nz, format='coo')
-        return scipy.sparse.block_diag([big_block] * ny, format='csr')
+        size = nx * ny * nz
+        ones = np.ones(block_size - diag_offset)
+        zeros = np.zeros(diag_offset)
+        diag = np.concatenate((*([ones, zeros] * (ny * nz - 1)), ones))
+        return scipy.sparse.diags([-2.0, diag, diag], [0, -1, 1], shape=(size, size), format='csr')
 
     @staticmethod
     def construct_d2dy2_in_3d(nx, ny, nz):
         diag_offset = nx
         block_size = nx * ny
-        block = scipy.sparse.diags([1.0, -2.0, 1.0], [-diag_offset, 0, diag_offset], shape=(block_size, block_size),
-                                   format='coo')
-        return scipy.sparse.block_diag([block] * nz, format='csr')
+        size = nx * ny * nz
+        ones = np.ones(block_size - diag_offset)
+        zeros = np.zeros(diag_offset)
+        diag = np.concatenate((*([ones, zeros] * (nz - 1)), ones))
+        return scipy.sparse.diags([-2.0, diag, diag], [0, -diag_offset, diag_offset], shape=(size, size), format='csr')
 
     @staticmethod
     def construct_d2dz2_in_3d(nx, ny, nz):
