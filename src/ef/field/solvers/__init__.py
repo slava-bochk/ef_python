@@ -121,5 +121,5 @@ class FieldSolver:
     @staticmethod
     def double_index(n_nodes):
         nx, ny, nz = n_nodes - 2
-        return np.array([(i + j * nx + k * nx * ny, i + 1, j + 1, k + 1)
-                         for k in range(nz) for j in range(ny) for i in range(nx)])
+        i, j, k = np.mgrid[0:nx, 0:ny, 0:nz].reshape((3, -1), order='F')
+        return np.column_stack((i + j * nx + k * nx * ny, i + 1, j + 1, k + 1))
