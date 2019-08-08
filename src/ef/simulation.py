@@ -89,7 +89,7 @@ class Simulation(SerializableH5):
     def boris_integration(self, dt):
         for particles in self.particle_arrays:
             total_el_field, total_mgn_field = \
-                self.compute_total_fields_at_positions(particles.dict['positions'])
+                self.compute_total_fields_at_positions(particles.positions)
             if self.magnetic_fields != 0 and total_mgn_field.any():
                 particles.boris_update_momentums(dt, total_el_field, total_mgn_field)
             else:
@@ -101,7 +101,7 @@ class Simulation(SerializableH5):
         for particles in self.particle_arrays:
             if not particles.momentum_is_half_time_step_shifted:
                 total_el_field, total_mgn_field = \
-                    self.compute_total_fields_at_positions(particles.dict['positions'])
+                    self.compute_total_fields_at_positions(particles.positions)
                 if self.magnetic_fields != 0 and total_mgn_field.any():
                     particles.boris_update_momentums(minus_half_dt, total_el_field, total_mgn_field)
                 else:

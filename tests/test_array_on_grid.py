@@ -81,31 +81,31 @@ class TestArrayOnGrid:
     def test_interpolate_scalar(self):
         a = self.Array(MeshGrid(1, 2), None, [[[0, 1], [0, -1]],
                                               [[0, 0], [0, 0]]])
-        positions = [(0, 0, 0), (0, 0, 1), (0, 1, 0), (0, 1, 1),
-                     (1, 0, 0), (1, 0, 1), (1, 1, 0), (1, 1, 1),
-                     (0.5, 0.5, 0.5), (0.5, 0, 0.5), (0.5, 1, 0.5), (0, 0, 2)]
+        positions = self.xp.array([(0, 0, 0), (0, 0, 1), (0, 1, 0), (0, 1, 1),
+                                   (1, 0, 0), (1, 0, 1), (1, 1, 0), (1, 1, 1),
+                                   (0.5, 0.5, 0.5), (0.5, 0, 0.5), (0.5, 1, 0.5), (0, 0, 2)], dtype=float)
         self.assert_ae(a.interpolate_at_positions(positions), [0, 1, 0, -1,
                                                                0, 0, 0, 0,
                                                                0, 0.25, -0.25, 0])
-        self.assert_ae(a.interpolate_at_positions([positions[1]]), [1])
+        self.assert_ae(a.interpolate_at_positions(positions[1:2]), self.xp.array([1.]))
 
     def test_interpolate_vector(self):
         a = self.Array(MeshGrid((2, 4, 8), (3, 3, 3)), 3, self.xp.full((3, 3, 3, 3), 100))
         a._data[1:2, 0:2, 0:2] = self.xp.array([[[2, 1, 0], [-3, 1, 0]],
-                                               [[0, -1, 0], [-1, 0, 0]]])
-        self.assert_ae(a.interpolate_at_positions([(1, 1, 3)]), [(-1.25, 0.375, 0)])
-        self.assert_ae(a.interpolate_at_positions([(1, 1, 3), (2, 1, 3), (1.5, 1, 3)]),
-                       [(-1.25, 0.375, 0),
-                        (100, 100, 100),
-                        (49.375, 50.1875, 50)])
+                                                [[0, -1, 0], [-1, 0, 0]]])
+        self.assert_ae(a.interpolate_at_positions(self.xp.array([(1, 1, 3)], dtype=float)), self.xp.array([(-1.25, 0.375, 0)]))
+        self.assert_ae(a.interpolate_at_positions(self.xp.array([(1, 1, 3), (2, 1, 3), (1.5, 1, 3)], dtype=float)),
+                       self.xp.array([(-1.25, 0.375, 0),
+                                      (100, 100, 100),
+                                      (49.375, 50.1875, 50)]))
 
     def test_gradient(self):
         m = MeshGrid((1.5, 2, 1), (4, 3, 2))
         potential = self.Array(m)
         potential._data = self.xp.stack([self.xp.array([[0., 0, 0],
-                                                       [1, 2, 3],
-                                                       [4, 3, 2],
-                                                       [4, 4, 4]]), self.xp.zeros((4, 3))], -1)
+                                                        [1, 2, 3],
+                                                        [4, 3, 2],
+                                                        [4, 4, 4]]), self.xp.zeros((4, 3))], -1)
         expected = self.Array(m, 3, [[[[-2, 0, 0], [0, 0, 0]], [[-4, 0, 0], [0, 0, 0]], [[-6, 0, 0], [0, 0, 0]]],
                                      [[[-4, -1, 1], [0, 0, 1]], [[-3, -1, 2], [0, 0, 2]], [[-2, -1, 3], [0, 0, 3]]],
                                      [[[-3, 1, 4], [0, 0, 4]], [[-2, 1, 3], [0, 0, 3]], [[-1, 1, 2], [0, 0, 2]]],

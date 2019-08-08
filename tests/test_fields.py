@@ -62,11 +62,12 @@ class TestFields:
         assert_array_equal(f.get_at_points((1, 2, 3), 5.), (3.14, 2.7, -0.5))
         assert_array_equal(f.get_at_points((3, 2, 1), 5.), (3.14, 2.7, -0.5))
 
-    def test_zero(self):
+    def test_zero(self, backend):
         f = FieldZero('z', 'magnetic')
-        assert_array_equal(f.get_at_points((1, 2, 3), 0.), (0, 0, 0))
-        assert_array_equal(f.get_at_points((1, 2, 3), 5.), (0, 0, 0))
-        assert_array_equal(f.get_at_points((3, 2, 1), 5.), (0, 0, 0))
+        assert_ae = f.xp.testing.assert_array_equal
+        assert_ae(f.get_at_points((1, 2, 3), 0.), (0, 0, 0))
+        assert_ae(f.get_at_points((1, 2, 3), 5.), (0, 0, 0))
+        assert_ae(f.get_at_points((3, 2, 1), 5.), (0, 0, 0))
 
     def test_expression(self):
         f = FieldExpression('e1', 'electric', '-1+t', 'x*y-z', 'x+y*z')
