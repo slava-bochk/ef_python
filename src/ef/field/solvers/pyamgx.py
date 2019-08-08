@@ -1,3 +1,5 @@
+import numpy
+
 from ef.field.solvers import FieldSolver
 
 
@@ -43,5 +45,12 @@ class FieldSolverPyamgx(FieldSolver):
         self.init_rhs_vector(charge_density, potential)
         self._rhs.upload(self.rhs)
         self._solver.solve(self._rhs, self._phi_vec)
-        self.phi_vec = self._phi_vec.download()
         self.transfer_solution_to_spat_mesh(potential)
+
+    def transfer_solution_to_spat_mesh(self, potential):
+        if potential.xp is numpy:
+            super().transfer_solution_to_spat_mesh(potential)
+        else:
+            buf = potential.xp.empty_like(potential._data[1:-1, 1:-1, 1:-1])
+            self._phi_vec.download_raw(buf.data.ptr)
+            potential._data[1:-1, 1:-1, 1:-1] = buf.reshape(self.mesh.n_nodes - 2, order='F')

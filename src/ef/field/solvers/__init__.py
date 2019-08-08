@@ -112,7 +112,6 @@ class FieldSolver:
         self.rhs[self.nodes_in_regions] = self.potential_in_regions
 
     def transfer_solution_to_spat_mesh(self, potential):
-        # TODO: copy directly when using amgx and cupy
         potential._data[1:-1, 1:-1, 1:-1] = potential.xp.asarray(self.phi_vec.reshape(self.mesh.n_nodes - 2, order='F'))
 
     @staticmethod
