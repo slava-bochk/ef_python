@@ -4,7 +4,7 @@ import inject
 
 from ef.field.on_grid import FieldOnGrid
 from ef.meshgrid import MeshGrid
-from ef.util import safe_default_inject
+from ef.util.inject import safe_default_inject
 from ef.util.array_on_grid import ArrayOnGrid
 
 __all__ = ['SpatialMeshConf', 'SpatialMeshSection']

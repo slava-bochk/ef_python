@@ -87,6 +87,7 @@ def test_main(mocker, capsys, tmpdir, monkeypatch, solver_, backend_):
         argv += ["--backend", backend_]
     mocker.patch("sys.argv", argv)
     main()
+    inject.clear()
     out, err = capsys.readouterr()
     assert err == ""
     assert out == f"""Trying to guess input file type: {config}
@@ -118,6 +119,7 @@ Writing to file out_0000010.h5
         argv += ["--backend", backend_]
     mocker.patch("sys.argv", argv)
     main()
+    inject.clear()
     out, err = capsys.readouterr()
     assert err == ""
     assert out == f"""Trying to guess input file type: out_0000005.h5
@@ -127,4 +129,3 @@ Using output prefix and suffix: out_ .h5
 Writing step 10 to file
 Writing to file out_0000010.h5
 """
-    assert not inject.is_configured()
