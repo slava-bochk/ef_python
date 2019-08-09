@@ -2,7 +2,7 @@ import inject
 import numpy
 from numpy.core._multiarray_umath import normalize_axis_index
 
-from ef.util import safe_default_inject
+from ef.util.inject import safe_default_inject
 from ef.util.physical_constants import speed_of_light
 from ef.util.serializable_h5 import SerializableH5
 
