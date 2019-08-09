@@ -73,18 +73,18 @@ def test_guess_stdin(tmpdir, monkeypatch):
     assert guess_input_type('-') == (True, p)
 
 
-@pytest.mark.parametrize('solver', [' ', 'amg', pytest.param('amgx', marks=pytest.mark.amgx)])
-@pytest.mark.parametrize('backend', [' ', 'numpy', pytest.param('cupy', marks=pytest.mark.cupy)])
-def test_main(mocker, capsys, tmpdir, monkeypatch, solver, backend):
+@pytest.mark.parametrize('solver_', [' ', 'amg', pytest.param('amgx', marks=pytest.mark.amgx)])
+@pytest.mark.parametrize('backend_', [' ', 'numpy', pytest.param('cupy', marks=pytest.mark.cupy)])
+def test_main(mocker, capsys, tmpdir, monkeypatch, solver_, backend_):
     inject.clear()
     monkeypatch.chdir(tmpdir)
     config = tmpdir.join("test_main.conf")
     Config(time_grid=TimeGridConf(10, 5, 1)).export_to_fname("test_main.conf")
     argv = ["main.py", str(config)]
-    if solver != ' ':
-        argv += ["--solver", solver]
-    if backend != ' ':
-        argv += ["--backend", backend]
+    if solver_ != ' ':
+        argv += ["--solver", solver_]
+    if backend_ != ' ':
+        argv += ["--backend", backend_]
     mocker.patch("sys.argv", argv)
     main()
     out, err = capsys.readouterr()
@@ -112,10 +112,10 @@ Writing to file out_0000010.h5
 """
 
     argv = ["main.py", "out_0000005.h5"]
-    if solver != ' ':
-        argv += ["--solver", solver]
-    if backend != ' ':
-        argv += ["--backend", backend]
+    if solver_ != ' ':
+        argv += ["--solver", solver_]
+    if backend_ != ' ':
+        argv += ["--backend", backend_]
     mocker.patch("sys.argv", argv)
     main()
     out, err = capsys.readouterr()
