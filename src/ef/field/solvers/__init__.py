@@ -99,7 +99,6 @@ class FieldSolver:
         self.set_rhs_for_nodes_inside_objects()
 
     def init_rhs_vector_in_full_domain(self, charge_density, potential):
-        # TODO: use cupy with amgx?
         charge = charge_density.data
         pot = potential.data
         rhs = -4 * np.pi * self.mesh.cell.prod() ** 2 * charge[1:-1, 1:-1, 1:-1]
