@@ -1,25 +1,22 @@
 from enum import Enum
+from typing import Dict, Type, cast
 
 import numpy as np
 from h5py import Dataset, Group
 
 from ef.util.data_class import DataClass
-from ef.util.subclasses import get_all_subclasses
+from ef.util.subclasses import Registered
 
 
-class SerializableH5(DataClass):
-    _subclass_dict = None
-
+class SerializableH5(DataClass, Registered, dont_register=True):
     def save_h5(self, h5group):
-        h5group.attrs['class'] = self.__class__.__name__
+        h5group.attrs['class'] = self.class_key
         for k, v in self.dict.items():
             self._save_value(h5group, k, v)
 
     @staticmethod
-    def load_h5(h5group):
-        if SerializableH5._subclass_dict is None:
-            SerializableH5._subclass_dict = {c.__name__: c for c in get_all_subclasses(SerializableH5)}
-        return SerializableH5._subclass_dict[h5group.attrs['class']].load_h5_args(h5group)
+    def load_h5(h5group: Group) -> 'SerializableH5':
+        return cast('SerializableH5', SerializableH5.subclasses[h5group.attrs['class']]).load_h5_args(h5group)
 
     @classmethod
     def load_h5_args(cls, h5group):
