@@ -1,11 +1,63 @@
 from enum import Enum
-from typing import Dict, Type, cast
+from typing import cast, Type, TypeVar, Dict, List, Union
 
 import numpy as np
 from h5py import Dataset, Group
 
 from ef.util.data_class import DataClass
 from ef.util.subclasses import Registered
+
+
+class Serializable(DataClass, Registered, dont_register=True):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+
+DataStructure = Union[Dict[str: 'DataStructure'], List['DataStructure'], Serializable, int,
+                      float, str, np.ndarray]
+
+DataTree = TypeVar('DataTree', Dict[str: 'DataTree'], int, float, str, np.ndarray)
+
+
+def structure_to_tree(value: DataStructure) -> DataTree:
+    if isinstance(value, Serializable):
+        d = value.dict_init
+        _class = value.class_key
+    elif isinstance(value, list):
+        d = {str(i): x for i, x in enumerate(value)}
+        _class = 'list'
+    elif isinstance(value, dict):
+        d = value.copy()
+        _class = 'dict'
+    else:
+        return value
+    d = {k: structure_to_tree(v) for k, v in d.items()}
+    d['_class'] = _class
+    return d
+
+
+def tree_to_structure(d: DataTree) -> DataStructure:
+    _class = d['_class']
+    d = {k: tree_to_structure(v) for k, v in d.items() if k != '_class'}
+    if _class == 'dict':
+        return d
+    elif _class == 'list':
+        return [d[str(i)] for i in range(len(d))]
+    else:
+        class_ = cast(Type[Serializable], Serializable.subclasses[_class])
+        return class_(**d)
+
+
+def tree_to_hdf5(tree: Dict[str: 'DataTree'], group: Group):
+    for key, value in tree.items():
+        if isinstance(value, np.ndarray):
+            group[key] = value
+        elif isinstance(value, dict):
+            tree_to_hdf5(value, group.create_group(key))
+        elif isinstance(value, Enum):
+            group.attrs[key] = value.name
+        else:
+            group.attrs[key] = value
 
 
 class SerializableH5(DataClass, Registered, dont_register=True):

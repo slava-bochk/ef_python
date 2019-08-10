@@ -16,6 +16,9 @@ def get_all_subclasses(cls):
 class Registered:
     subclasses: Dict[str, Type['Registered']] = {}
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
     @classmethod
     def class_key(cls):
         return f"{cls.__module__}.{cls.__name__}"

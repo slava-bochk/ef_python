@@ -4,6 +4,8 @@ from numpy.testing import assert_array_equal
 
 class DataClass:
     """ Mixin class to implement default methods for hierarchies of simple objects containing ndarrays. """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     @property
     def dict(self) -> dict:
