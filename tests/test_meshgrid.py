@@ -36,13 +36,6 @@ class TestMeshGrid:
         assert_array_equal(MeshGrid.from_step((4, 2, 3), (2, 1, 3), (1, 2, 3.14)).node_coordinates,
                            coords + [1, 2, 3.14])
 
-    def test_config(self, capsys, backend):
-        mesh = SpatialMeshConf((4, 2, 3), (2, 1, 3)).make()
-        assert mesh == MeshGrid((4, 2, 3), (3, 3, 2))
-        out, err = capsys.readouterr()
-        assert out == ""
-        assert err == ""
-
     def test_do_init_warnings(self, capsys, caplog):
         MeshGrid.from_step((12, 12, 12), (5, 5, 7))
         out, err = capsys.readouterr()
