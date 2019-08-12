@@ -57,10 +57,10 @@ class Simulation(SerializableH5):
 
         if self.particle_interaction_model == Model.binary:
             self._dynamic_field = FieldParticles('binary_particle_field', self.particle_arrays)
-            if not is_trivial(potential, self.inner_regions):
+            if not is_trivial(self.potential, self.inner_regions):
                 self._dynamic_field += self.electric_field
         elif self.particle_interaction_model == Model.noninteracting:
-            if not is_trivial(potential, self.inner_regions):
+            if not is_trivial(self.potential, self.inner_regions):
                 self._dynamic_field = self.electric_field
             else:
                 self._dynamic_field = FieldZero('Uniform_potential_zero_field', 'electric')

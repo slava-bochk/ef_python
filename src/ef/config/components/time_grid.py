@@ -8,7 +8,8 @@ from ef.config.section import ConfigSection
 
 
 class TimeGridConf(ConfigComponent):
-    def __init__(self, total=100.0, save_step=10.0, step=1.0):
+    def __init__(self, total=100.0, save_step=10.0, step=1.0, **kwargs):
+        super().__init__(**kwargs)
         self.total = total
         self.save_step = save_step
         self.step = step
