@@ -1,4 +1,4 @@
-from typing import cast, Type, Dict, List, Union, Tuple
+from typing import cast, Type, Dict, List, Union, Tuple, TypeVar
 
 import numpy as np
 from h5py import Dataset, Group
@@ -6,17 +6,20 @@ from h5py import Dataset, Group
 from ef.util.data_class import DataClass
 from ef.util.subclasses import Registered
 
+T = TypeVar('T')
+
 
 class SerializableH5(DataClass, Registered, dont_register=True):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
     @classmethod
-    def load_h5(cls, group: Group):
-        return tree_to_structure(hdf5_to_tree(group))
+    def from_tree(cls: Type[T], data: 'DataTree') -> T:
+        return tree_to_structure(data)
 
-    def save_h5(self, group: Group):
-        return tree_to_hdf5(structure_to_tree(self), group)
+    @property
+    def tree(self):
+        return structure_to_tree(self)
 
 
 DataStructure = Union[

@@ -1,6 +1,5 @@
 import logging
 
-import h5py
 import numpy as np
 from numpy.testing import assert_array_equal
 from pytest import raises
@@ -74,20 +73,10 @@ class TestMeshGrid:
             MeshGrid.from_step(((1, 2), 3), (1, 1, 1))
         with raises(ValueError):
             MeshGrid.from_step((10, 10, 10), [[2, 1, 3], [4, 5, 6], [7, 8, 9]],
-                                BoundaryConditionsConf(3.14))
+                               BoundaryConditionsConf(3.14))
         with raises(ValueError):
             MeshGrid.from_step((10, 10, -30), (2, 1, 3))
         with raises(ValueError):
             MeshGrid.from_step((10, 10, 10), (2, -2, 3))
         mesh = MeshGrid.from_step((10, 10, 10), (17, 2, 3))
         assert tuple(mesh.cell) == (10, 2, 2.5)
-
-    def test_init_h5(self, tmpdir):
-        fname = tmpdir.join('test_spatialmesh_init.h5')
-
-        mesh1 = MeshGrid.from_step((10, 20, 30), (2, 1, 3))
-        with h5py.File(fname, mode="w") as h5file:
-            mesh1.save_h5(h5file.create_group("/meshgroup"))
-        with h5py.File(fname, mode="r") as h5file:
-            mesh2 = MeshGrid.load_h5(h5file["/meshgroup"])
-        assert mesh1 == mesh2

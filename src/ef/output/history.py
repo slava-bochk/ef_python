@@ -3,6 +3,7 @@ import numpy as np
 
 from ef.output import OutputWriter
 from ef.particle_interaction_model import Model
+from ef.util.serializable_h5 import tree_to_hdf5
 
 
 class OutputWriterHistory(OutputWriter):
@@ -80,4 +81,4 @@ class OutputWriterHistory(OutputWriter):
                 h['field/potential'].dims[i + 1].label = c
                 h['field/potential'].dims.create_scale(h['field/{}'.format(c)], c)
                 h['field/potential'].dims[i + 1].attach_scale(h['field/{}'.format(c)])
-        sim.save_h5(self.h5file.create_group('simulation'))
+        tree_to_hdf5(sim.tree, self.h5file.create_group('simulation'))

@@ -14,6 +14,7 @@ from ef.particle_tracker import ParticleTracker
 from ef.simulation import Simulation
 from ef.time_grid import TimeGrid
 from ef.util.array_on_grid import ArrayOnGrid
+from ef.util.serializable_h5 import hdf5_to_tree
 
 
 class Reader:
@@ -36,9 +37,9 @@ class Reader:
         if format_ == 'cpp':
             return Reader.import_from_h5(h5file)
         elif format_ == 'python':
-            sim = Simulation.load_h5(h5file)
+            sim = Simulation.from_tree(hdf5_to_tree(h5file))
         else:
-            sim = Simulation.load_h5(h5file['simulation'])
+            sim = Simulation.from_tree(hdf5_to_tree(h5file['simulation']))
         sim.particle_interaction_model = Model[sim.particle_interaction_model]
         return sim
 
