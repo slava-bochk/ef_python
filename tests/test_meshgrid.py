@@ -37,7 +37,7 @@ class TestMeshGrid:
                            coords + [1, 2, 3.14])
 
     def test_config(self, capsys, backend):
-        mesh, charge, potential, field = SpatialMeshConf((4, 2, 3), (2, 1, 3)).make()
+        mesh = SpatialMeshConf((4, 2, 3), (2, 1, 3)).make()
         assert mesh == MeshGrid((4, 2, 3), (3, 3, 2))
         out, err = capsys.readouterr()
         assert out == ""
