@@ -1,7 +1,7 @@
 from collections import defaultdict
 from typing import List
 
-from ef.config.components import Box
+import ef.config.components.shapes as shapes
 from ef.field import FieldZero, FieldSum
 from ef.field.on_grid import FieldOnGrid
 from ef.field.particles import FieldParticles
@@ -32,7 +32,7 @@ class Simulation(SerializableH5):
         self.charge_density = charge_density
         self.potential = potential
         self.electric_field = electric_field
-        self._domain = InnerRegion('simulation_domain', Box(0, mesh.size), inverted=True)
+        self._domain = InnerRegion('simulation_domain', shapes.Box(0, mesh.size), inverted=True)
         self.inner_regions = inner_regions
         self.particle_sources = particle_sources
         self.electric_fields = FieldSum.factory(electric_fields, 'electric')

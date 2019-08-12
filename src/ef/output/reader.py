@@ -1,5 +1,6 @@
 from typing import Type
 
+import h5py
 import inject
 import numpy as np
 
@@ -21,7 +22,7 @@ class Reader:
     array_class: Type[ArrayOnGrid] = inject.attr(ArrayOnGrid)
 
     @staticmethod
-    def guess_h5_format(h5file):
+    def guess_h5_format(h5file: h5py.File) -> str:
         if 'SpatialMesh' in h5file:
             return 'cpp'
         elif 'history' in h5file:
@@ -32,7 +33,7 @@ class Reader:
             raise ValueError('Cannot guess hdf5 file format')
 
     @staticmethod
-    def read_simulation(h5file):
+    def read_simulation(h5file: h5py.File) -> Simulation:
         format_ = Reader.guess_h5_format(h5file)
         if format_ == 'cpp':
             return Reader.import_from_h5(h5file)
@@ -44,7 +45,7 @@ class Reader:
         return sim
 
     @staticmethod
-    def import_from_h5(h5file):
+    def import_from_h5(h5file: h5py.File) -> Simulation:
         fields = [Field.import_h5(g) for g in h5file['ExternalFields'].values()]
         sources = [ParticleSource.import_h5(g) for g in h5file['ParticleSources'].values()]
         particles = [ParticleArray.import_h5(g) for g in h5file['ParticleSources'].values()]
@@ -54,7 +55,7 @@ class Reader:
         charge = Reader.array_class(mesh, (), np.reshape(g['charge_density'], mesh.n_nodes))
         potential = Reader.array_class(mesh, (), np.reshape(g['potential'], mesh.n_nodes))
         field = FieldOnGrid('spatial_mesh', 'electric', Reader.array_class(mesh, 3, np.moveaxis(
-            np.array([np.reshape(g['electric_field_{}'.format(c)], mesh.n_nodes) for c in 'xyz']),
+            np.array([np.reshape(g[f'electric_field_{c}'], mesh.n_nodes) for c in 'xyz']),
             0, -1)))
         return Simulation(
             time_grid=TimeGrid.import_h5(h5file['TimeGrid']),
