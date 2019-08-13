@@ -16,21 +16,22 @@ from ef.particle_interaction_model import Model
 from ef.particle_source import ParticleSource
 from ef.simulation import Simulation
 from ef.time_grid import TimeGrid
+from ef.util.testing import assert_dataclass_eq
 
 
 @pytest.fixture()
 def sim_full():
     return Simulation(TimeGrid(200, 2, 20), MeshGrid(5, 51),
-               particle_sources=[ParticleSource('a', Box()),
-                                 ParticleSource('c', Cylinder()),
-                                 ParticleSource('d', Tube(start=(0, 0, 0), end=(0, 0, 1)))],
-               inner_regions=[InnerRegion('1', Box(), 1),
-                              InnerRegion('2', Sphere(), -2),
-                              InnerRegion('3', Cylinder(), 0),
-                              InnerRegion('4', Tube(), 4)],
-               particle_interaction_model=Model.binary,
-               electric_fields=[FieldUniform('x', 'electric', (-2, -2, 1))],
-               magnetic_fields=[FieldExpression('y', 'magnetic', '0', '0', '3*x + sqrt(y) - z**2')])
+                      particle_sources=[ParticleSource('a', Box()),
+                                        ParticleSource('c', Cylinder()),
+                                        ParticleSource('d', Tube(start=(0, 0, 0), end=(0, 0, 1)))],
+                      inner_regions=[InnerRegion('1', Box(), 1),
+                                     InnerRegion('2', Sphere(), -2),
+                                     InnerRegion('3', Cylinder(), 0),
+                                     InnerRegion('4', Tube(), 4)],
+                      particle_interaction_model=Model.binary,
+                      electric_fields=[FieldUniform('x', 'electric', (-2, -2, 1))],
+                      magnetic_fields=[FieldExpression('y', 'magnetic', '0', '0', '3*x + sqrt(y) - z**2')])
 
 
 @pytest.mark.usefixtures('backend')
@@ -53,7 +54,7 @@ class TestOutput:
         assert tmpdir.join('test_0000000.ext').exists()
         with h5py.File('test_0000000.ext') as h5file:
             assert Reader().guess_h5_format(h5file) == 'cpp'
-            Reader().read_simulation(h5file).assert_eq(sim)
+            assert_dataclass_eq(Reader().read_simulation(h5file), sim)
 
     def test_write_python(self, monkeypatch, tmpdir, sim_full):
         monkeypatch.chdir(tmpdir)
@@ -65,7 +66,7 @@ class TestOutput:
         assert tmpdir.join('test_0000000.ext').exists()
         with h5py.File('test_0000000.ext') as h5file:
             assert Reader().guess_h5_format(h5file) == 'python'
-            Reader().read_simulation(h5file).assert_eq(sim)
+            assert_dataclass_eq(Reader().read_simulation(h5file), sim)
 
     def test_write_history(self, monkeypatch, tmpdir, sim_full):
         monkeypatch.chdir(tmpdir)
@@ -80,7 +81,7 @@ class TestOutput:
         assert writer.h5file.keys() == {'history', 'simulation'}
         with h5py.File('test_history.ext') as h5file:
             assert Reader().guess_h5_format(h5file) == 'history'
-            Reader().read_simulation(h5file).assert_eq(sim)
+            assert_dataclass_eq(Reader().read_simulation(h5file), sim)
 
     def test_numbered(self, capsys, mocker):
         mocker.patch('h5py.File')

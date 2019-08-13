@@ -10,13 +10,15 @@ from numpy.testing import assert_array_equal
 from ef.config.components import Box
 from ef.particle_array import ParticleArray
 from ef.particle_source import ParticleSource
+from ef.util.testing import assert_dataclass_eq
+
 
 @pytest.mark.usefixtures("backend")
 class TestParticleSource:
     def test_init(self):
         p = ParticleSource()
         assert p.name == "particle_source"
-        assert p.shape == Box()
+        assert_dataclass_eq(p.shape, Box())
         assert p.initial_number_of_particles == 0
         assert p.particles_to_generate_each_step == 0
         assert_array_equal(p.mean_momentum, np.zeros(3))
@@ -26,18 +28,18 @@ class TestParticleSource:
 
     def test_generate_for_simulation(self):
         ps = ParticleSource('test', Box(6, 0), 17, 13, (4, 4, 4), 0, -2, 6)
-        ps.generate_initial_particles().assert_eq(
-            ParticleArray(range(17), -2, 6, np.full((17, 3), 6), np.full((17, 3), 4), False))
-        ps.generate_each_step().assert_eq(
-            ParticleArray(range(13), -2, 6, np.full((13, 3), 6), np.full((13, 3), 4), False))
+        assert_dataclass_eq(ps.generate_initial_particles(),
+                            ParticleArray(range(17), -2, 6, np.full((17, 3), 6), np.full((17, 3), 4), False))
+        assert_dataclass_eq(ps.generate_each_step(),
+                            ParticleArray(range(13), -2, 6, np.full((13, 3), 6), np.full((13, 3), 4), False))
 
     def test_generate_particles(self):
         ps = ParticleSource('test', Box((1., 2., 3.), 0), 17, 13, (-2, 3, 1), 0, -2, 6)
-        ps.generate_num_of_particles(3).assert_eq(
+        assert_dataclass_eq(ps.generate_num_of_particles(3),
             ParticleArray(range(3), -2, 6, [(1, 2, 3)] * 3, [(-2, 3, 1)] * 3, False))
-        ps.generate_num_of_particles(1).assert_eq(
+        assert_dataclass_eq(ps.generate_num_of_particles(1),
             ParticleArray([0], -2, 6, [(1, 2, 3)], [(-2, 3, 1)], False))
-        ps.generate_num_of_particles(0).assert_eq(
+        assert_dataclass_eq(ps.generate_num_of_particles(0),
             ParticleArray([], -2, 6, np.empty((0, 3)), np.empty((0, 3)), False))
 
     def test_generate_positions(self):
@@ -62,4 +64,4 @@ class TestParticleSource:
             p1.export_h5(h5file.create_group(p1.name))
         with h5py.File(f, mode="r") as h5file:
             p2 = ParticleSource.import_h5(h5file[p1.name])
-        p1.assert_eq(p2)
+        assert_dataclass_eq(p1, p2)

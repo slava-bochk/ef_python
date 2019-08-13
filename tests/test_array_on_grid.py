@@ -8,7 +8,7 @@ from scipy.interpolate import RegularGridInterpolator
 
 from ef.meshgrid import MeshGrid
 from ef.util.array_on_grid import ArrayOnGrid
-from ef.util.testing import assert_array_equal, assert_array_almost_equal
+from ef.util.testing import assert_array_equal, assert_array_almost_equal, assert_dataclass_eq
 
 
 @pytest.mark.usefixtures("backend")
@@ -127,7 +127,7 @@ class TestArrayOnGrid:
                                      [[[-3, 1, 4], [0, 0, 4]], [[-2, 1, 3], [0, 0, 3]], [[-1, 1, 2], [0, 0, 2]]],
                                      [[[0, 0, 4], [0, 0, 4]], [[-2, 0, 4], [0, 0, 4]], [[-4, 0, 4], [0, 0, 4]]]])
         field = potential.gradient()
-        assert field == expected
+        assert_dataclass_eq(field, expected)
         with raises(ValueError, match="Trying got compute gradient for a non-scalar field: ambiguous"):
             field.gradient()
 

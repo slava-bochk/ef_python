@@ -6,6 +6,7 @@ import pytest
 from pytest import raises, approx
 
 from ef.util.serializable_h5 import SerializableH5, structure_to_tree, tree_to_structure, tree_to_hdf5, hdf5_to_tree
+from ef.util.testing import assert_dataclass_eq
 
 
 @pytest.fixture
@@ -32,7 +33,7 @@ def test_structure_to_tree():
 
 
 def test_tree_to_structure():
-    assert tree_to_structure({'_class': 'test_serializable_h5.A', 'a': 1, 'b': 'a'}) == A(1, 'a')
+    assert_dataclass_eq(tree_to_structure({'_class': 'test_serializable_h5.A', 'a': 1, 'b': 'a'}), A(1, 'a'))
     assert tree_to_structure({'_class': 'dict', 'a': 1, 'b': 'a'}) == {'a': 1, 'b': 'a'}
     assert tree_to_structure({'_class': 'list', '0': 13, '1': 14, '2': 15}) == [13, 14, 15]
     assert tree_to_structure({'_class': 'tuple', '0': 13, '1': 14, '2': 15}) == (13, 14, 15)
@@ -63,7 +64,11 @@ def test_big_example():
                   }
             }
     assert structure_to_tree(structure) == tree
-    assert tree_to_structure(tree) == structure
+    data = tree_to_structure(tree)
+    assert type(data) == dict
+    assert data.keys() == {'a', 'x'}
+    assert data['x'] == structure['x']
+    assert_dataclass_eq(data['a'], structure['a'])
 
 
 def test_tree_to_hdf5_empty(hdf5_temp: h5py.File):
