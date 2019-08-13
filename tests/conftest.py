@@ -17,14 +17,10 @@ def _backend(request):
         if xp == 'numpy':
             binder.bind(ArrayOnGrid, ArrayOnGrid)
             binder.bind(numpy, numpy)
-            binder.bind(assert_array_equal, assert_array_equal)
-            binder.bind(assert_array_almost_equal, assert_array_almost_equal)
         elif xp == 'cupy':
             import cupy
             binder.bind(ArrayOnGrid, ArrayOnGridCupy)
             binder.bind(numpy, cupy)
-            binder.bind(assert_array_equal, cupy.testing.assert_array_equal)
-            binder.bind(assert_array_almost_equal, cupy.testing.assert_array_almost_equal)
     return conf
 
 

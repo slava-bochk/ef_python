@@ -4,9 +4,10 @@ import numpy as np
 from numpy.testing import assert_array_equal
 from pytest import raises
 
-from ef.config.components import SpatialMeshConf, BoundaryConditionsConf
+from ef.config.components import BoundaryConditionsConf
 from ef.meshgrid import MeshGrid
 from ef.util.array_on_grid import ArrayOnGrid
+from ef.util.testing import assert_dataclass_eq
 
 
 class TestMeshGrid:
@@ -17,9 +18,9 @@ class TestMeshGrid:
         assert_array_equal(m.origin, (0, 0, 0))
 
     def test_from_step(self):
-        assert MeshGrid.from_step(10, 1, 7) == MeshGrid(10, 11, 7)
-        assert MeshGrid.from_step([10, 20, 5], [1, 4, 1]) == MeshGrid([10, 20, 5], [11, 6, 6])
-        assert MeshGrid.from_step(10, [1, 2, 4]) == MeshGrid(10, [11, 6, 4])
+        assert_dataclass_eq(MeshGrid.from_step(10, 1, 7), MeshGrid(10, 11, 7))
+        assert_dataclass_eq(MeshGrid.from_step([10, 20, 5], [1, 4, 1]), MeshGrid([10, 20, 5], [11, 6, 6]))
+        assert_dataclass_eq(MeshGrid.from_step(10, [1, 2, 4]), MeshGrid(10, [11, 6, 4]))
 
     def test_cell(self):
         assert_array_equal(MeshGrid(10, 11, 7).cell, (1, 1, 1))

@@ -1,29 +1,37 @@
+from typing import Type
+
 import inject
 import numpy as np
 import pytest
-from numpy.testing import assert_array_equal, assert_array_almost_equal
 from pytest import raises
 from scipy.interpolate import RegularGridInterpolator
 
 from ef.meshgrid import MeshGrid
 from ef.util.array_on_grid import ArrayOnGrid
+from ef.util.testing import assert_array_equal, assert_array_almost_equal, assert_dataclass_eq
 
 
 @pytest.mark.usefixtures("backend")
 class TestArrayOnGrid:
-    Array = inject.attr(ArrayOnGrid)
+    Array: Type[ArrayOnGrid] = inject.attr(ArrayOnGrid)
     xp = inject.attr(np)
-    assert_ae = inject.attr(assert_array_equal)
-    assert_almost_ae = inject.attr(assert_array_almost_equal)
 
     def test_init(self):
-        self.assert_ae(self.Array(MeshGrid(10, 11)).data, self.xp.zeros((11, 11, 11)))
-        self.assert_ae(self.Array(MeshGrid(1, 5), 3, self.xp.ones((5, 5, 5, 3))).data, self.xp.ones((5, 5, 5, 3)))
+        a = self.Array(MeshGrid(10, 11))
+        assert a.value_shape == ()
+        assert_array_equal(a.data, np.zeros([11] * 3))
+        assert type(a._data) == self.xp.ndarray
+        data = self.xp.ones((5, 5, 5, 3))
+        a = self.Array(MeshGrid(1, 5), 3, data)
+        assert a.value_shape == (3,)
+        assert_array_equal(a.data, np.ones((5, 5, 5, 3)))
+        assert type(a._data) == self.xp.ndarray
+        assert a._data is not data  # data gets copied don't create ArrayOnGrid every cycle
         with raises(ValueError):
             self.Array(MeshGrid(1, 5), data=self.xp.ones((5, 5, 5, 3)))
 
     def test_n_nodes(self):
-        self.assert_ae(self.Array(MeshGrid(10, 11)).n_nodes, (11, 11, 11))
+        assert self.Array(MeshGrid(10, 11)).n_nodes == (11, 11, 11)
         assert self.Array(MeshGrid(10, 11), None).n_nodes == (11, 11, 11)
         assert self.Array(MeshGrid(10, 11), ()).n_nodes == (11, 11, 11)
         assert self.Array(MeshGrid(10, 11), 1).n_nodes == (11, 11, 11, 1)  # Should this be true?
@@ -31,44 +39,43 @@ class TestArrayOnGrid:
         assert self.Array(MeshGrid(10, 11), (2, 5)).n_nodes == (11, 11, 11, 2, 5)
 
     def test_zero(self):
-        self.assert_ae(self.Array(MeshGrid(10, 5)).zero, self.xp.zeros((5, 5, 5)))
-        self.assert_ae(self.Array(MeshGrid(10, 5), 3).zero, self.xp.zeros((5, 5, 5, 3)))
-        self.assert_ae(self.Array(MeshGrid(10, 5), (2, 5)).zero, self.xp.zeros((5, 5, 5, 2, 5)))
+        z = self.Array(MeshGrid(10, 5), (2, 5)).zero
+        assert type(z) == self.xp.ndarray
+        assert z.shape == (5, 5, 5, 2, 5)
+        assert (z == 0).all()
 
     def test_reset(self):
         a = self.Array(MeshGrid(1, 5), (), self.xp.ones((5, 5, 5)))
-        self.assert_ae(a.data, self.xp.ones((5, 5, 5)))
+        assert_array_equal(a.data, np.ones((5, 5, 5)))
         a.reset()
-        self.assert_ae(a.data, self.xp.zeros((5, 5, 5)))
+        assert_array_equal(a.data, np.zeros((5, 5, 5)))
 
     def test_distribute_scalar(self):
         a = self.Array(MeshGrid(1, 2))
         a.distribute_at_positions(8, self.xp.full((1000, 3), 0.5))
-        self.assert_ae(a.data, self.xp.full((2, 2, 2), 1000))
+        assert_array_equal(a.data, np.full((2, 2, 2), 1000))
         a.distribute_at_positions(8, self.xp.full((1000, 3), 0.5))
-        self.assert_ae(a.data, self.xp.full((2, 2, 2), 2000))
+        assert_array_equal(a.data, np.full((2, 2, 2), 2000))
         a.reset()
         a.distribute_at_positions(1, self.xp.full((1000, 3), 0.1))
-        self.assert_almost_ae(a.data, [[[729, 81], [81, 9]],
-                                       [[81, 9], [9, 1]]])
+        assert_array_almost_equal(a.data, np.array([[[729, 81], [81, 9]],
+                                                    [[81, 9], [9, 1]]]))
         a = self.Array(MeshGrid((2, 4, 8), (3, 3, 3)))
         a.distribute_at_positions(-2, [(1, 1, 3)])
-        self.assert_ae(a.data,
-                       [[[0, 0, 0], [0, 0, 0], [0, 0, 0]],
-                        [[-0.25 / 8, -0.75 / 8, 0], [-0.25 / 8, -0.75 / 8, 0], [0, 0, 0]],
-                        [[0, 0, 0], [0, 0, 0], [0, 0, 0]]])
+        assert_array_equal(a.data, [[[0, 0, 0], [0, 0, 0], [0, 0, 0]],
+                                    [[-0.25 / 8, -0.75 / 8, 0], [-0.25 / 8, -0.75 / 8, 0], [0, 0, 0]],
+                                    [[0, 0, 0], [0, 0, 0], [0, 0, 0]]])
+
         a.reset()
         a.distribute_at_positions(-2, [(1, 1, 3), (1, 1, 3)])
-        self.assert_ae(a.data,
-                       [[[0, 0, 0], [0, 0, 0], [0, 0, 0]],
-                        [[-0.25 / 4, -0.75 / 4, 0], [-0.25 / 4, -0.75 / 4, 0], [0, 0, 0]],
-                        [[0, 0, 0], [0, 0, 0], [0, 0, 0]]])
+        assert_array_equal(a.data, [[[0, 0, 0], [0, 0, 0], [0, 0, 0]],
+                                    [[-0.25 / 4, -0.75 / 4, 0], [-0.25 / 4, -0.75 / 4, 0], [0, 0, 0]],
+                                    [[0, 0, 0], [0, 0, 0], [0, 0, 0]]])
         a.reset()
         a.distribute_at_positions(-2, [(2, 4, 8)])
-        self.assert_ae(a.data,
-                       [[[0, 0, 0], [0, 0, 0], [0, 0, 0]],
-                        [[0, 0, 0], [0, 0, 0], [0, 0, 0]],
-                        [[0, 0, 0], [0, 0, 0], [0, 0, -0.25]]])
+        assert_array_equal(a.data, [[[0, 0, 0], [0, 0, 0], [0, 0, 0]],
+                                    [[0, 0, 0], [0, 0, 0], [0, 0, 0]],
+                                    [[0, 0, 0], [0, 0, 0], [0, 0, -0.25]]])
         a.reset()
         with raises(ValueError, match="Position is out of meshgrid bounds"):
             a.distribute_at_positions(-2, [(1, 2, 8.1)])
@@ -76,19 +83,19 @@ class TestArrayOnGrid:
     def test_distribute_vector(self):
         a = self.Array(MeshGrid(1, 2))
         with raises(ValueError, match="operands could not be broadcast together with shapes"):
-            self.assert_ae(a.distribute_at_positions(self.xp.array([8, 8, 8]), self.xp.full((1000, 3), 0.5)),
-                           self.xp.full((2, 2, 2, 3), 1000))
+            a.distribute_at_positions(self.xp.array([8, 8, 8]), self.xp.full((1000, 3), 0.5))
 
     def test_interpolate_scalar(self):
         a = self.Array(MeshGrid(1, 2), None, [[[0, 1], [0, -1]],
                                               [[0, 0], [0, 0]]])
-        positions = self.xp.array([(0, 0, 0), (0, 0, 1), (0, 1, 0), (0, 1, 1),
-                                   (1, 0, 0), (1, 0, 1), (1, 1, 0), (1, 1, 1),
-                                   (0.5, 0.5, 0.5), (0.5, 0, 0.5), (0.5, 1, 0.5), (0, 0, 2)], dtype=float)
-        self.assert_ae(a.interpolate_at_positions(positions), [0, 1, 0, -1,
-                                                               0, 0, 0, 0,
-                                                               0, 0.25, -0.25, 0])
-        self.assert_ae(a.interpolate_at_positions(positions[1:2]), self.xp.array([1.]))
+        positions = np.array([(0, 0, 0), (0, 0, 1), (0, 1, 0), (0, 1, 1),
+                              (1, 0, 0), (1, 0, 1), (1, 1, 0), (1, 1, 1),
+                              (0.5, 0.5, 0.5), (0.5, 0, 0.5), (0.5, 1, 0.5), (0, 0, 2)], dtype=float)
+        assert_array_equal(a.interpolate_at_positions(positions), [0, 1, 0, -1,
+                                                                   0, 0, 0, 0,
+                                                                   0, 0.25, -0.25, 0])
+        assert_array_equal(a.interpolate_at_positions(positions[1:2]), [1.])
+
         a = self.Array(MeshGrid((100, 20, 100), (101, 44, 101)), None, np.arange(101 * 44 * 101, dtype=float).reshape((101, 44, 101)))
         positions = np.linspace((0, 13, 100.1), (100.1, 0, 0), 314)
         o, s = np.zeros(3), np.array([100, 20, 100])
@@ -101,12 +108,12 @@ class TestArrayOnGrid:
         a = self.Array(MeshGrid((2, 4, 8), (3, 3, 3)), 3, self.xp.full((3, 3, 3, 3), 100))
         a._data[1:2, 0:2, 0:2] = self.xp.array([[[2, 1, 0], [-3, 1, 0]],
                                                 [[0, -1, 0], [-1, 0, 0]]])
-        self.assert_ae(a.interpolate_at_positions(self.xp.array([(1, 1, 3)], dtype=float)),
-                       self.xp.array([(-1.25, 0.375, 0)]))
-        self.assert_ae(a.interpolate_at_positions(self.xp.array([(1, 1, 3), (2, 1, 3), (1.5, 1, 3)], dtype=float)),
-                       self.xp.array([(-1.25, 0.375, 0),
-                                      (100, 100, 100),
-                                      (49.375, 50.1875, 50)]))
+        assert_array_equal(a.interpolate_at_positions(np.array([(1, 1, 3)], dtype=float)),
+                       [(-1.25, 0.375, 0)])
+        assert_array_equal(a.interpolate_at_positions(self.xp.array([(1, 1, 3), (2, 1, 3), (1.5, 1, 3)], dtype=float)),
+                           [(-1.25, 0.375, 0),
+                            (100, 100, 100),
+                            (49.375, 50.1875, 50)])
 
     def test_gradient(self):
         m = MeshGrid((1.5, 2, 1), (4, 3, 2))
@@ -120,7 +127,7 @@ class TestArrayOnGrid:
                                      [[[-3, 1, 4], [0, 0, 4]], [[-2, 1, 3], [0, 0, 3]], [[-1, 1, 2], [0, 0, 2]]],
                                      [[[0, 0, 4], [0, 0, 4]], [[-2, 0, 4], [0, 0, 4]], [[-4, 0, 4], [0, 0, 4]]]])
         field = potential.gradient()
-        assert field == expected
+        assert_dataclass_eq(field, expected)
         with raises(ValueError, match="Trying got compute gradient for a non-scalar field: ambiguous"):
             field.gradient()
 

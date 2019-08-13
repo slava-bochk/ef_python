@@ -4,7 +4,6 @@ from typing import Type
 import inject
 import numpy as np
 import pytest
-from numpy.testing import assert_array_equal
 
 from ef.config.components import *
 from ef.config.config import Config
@@ -18,6 +17,7 @@ from ef.particle_interaction_model import Model
 from ef.runner import Runner
 from ef.time_grid import TimeGrid
 from ef.util.array_on_grid import ArrayOnGrid
+from ef.util.testing import assert_dataclass_eq, _assert_value_eq
 
 
 class TestSimulation:
@@ -28,16 +28,16 @@ class TestSimulation:
         parser = ConfigParser()
         parser.read_string(efconf.export_to_string())
         sim = Config.from_configparser(parser).make()
-        assert sim.time_grid == TimeGrid(100, 1, 10)
+        assert_dataclass_eq(sim.time_grid, TimeGrid(100, 1, 10))
         g = MeshGrid(10, 11)
-        assert sim.mesh == g
-        assert sim.potential == self.Array(g)
-        assert sim.charge_density == self.Array(g)
-        assert sim.electric_field == FieldOnGrid('spatial_mesh', 'electric', self.Array(g, 3))
+        assert_dataclass_eq(sim.mesh, g)
+        assert_dataclass_eq(sim.potential, self.Array(g))
+        assert_dataclass_eq(sim.charge_density, self.Array(g))
+        assert_dataclass_eq(sim.electric_field, FieldOnGrid('spatial_mesh', 'electric', self.Array(g, 3)))
         assert sim.inner_regions == []
         assert sim.particle_sources == []
-        assert sim.electric_fields == FieldZero('ZeroSum', 'electric')
-        assert sim.magnetic_fields == FieldZero('ZeroSum', 'magnetic')
+        assert_dataclass_eq(sim.electric_fields, FieldZero('ZeroSum', 'electric'))
+        assert_dataclass_eq(sim.magnetic_fields, FieldZero('ZeroSum', 'magnetic'))
         assert sim.particle_interaction_model == Model.PIC
 
     def test_all_config(self, backend):
@@ -60,22 +60,22 @@ class TestSimulation:
         parser.read_string(efconf.export_to_string())
         conf = Config.from_configparser(parser)
         sim = conf.make()
-        assert sim.time_grid == TimeGrid(200, 2, 20)
-        assert sim.mesh == MeshGrid(5, 51)
-        assert sim.electric_field == FieldOnGrid('spatial_mesh', 'electric', self.Array(sim.mesh, 3))
-        assert sim.charge_density == self.Array(sim.mesh)
+        assert_dataclass_eq(sim.time_grid, TimeGrid(200, 2, 20))
+        assert_dataclass_eq(sim.mesh, MeshGrid(5, 51))
+        assert_dataclass_eq(sim.electric_field, FieldOnGrid('spatial_mesh', 'electric', self.Array(sim.mesh, 3)))
+        assert_dataclass_eq(sim.charge_density, self.Array(sim.mesh))
         expected = np.full((51, 51, 51), -2.7)
         expected[1:-1, 1:-1, 1:-1] = 0
-        assert sim.potential == self.Array(sim.mesh, (), expected)
-        assert sim.inner_regions == [InnerRegion('1', Box(), 1),
-                                     InnerRegion('2', Sphere(), -2),
-                                     InnerRegion('3', Cylinder(), 0),
-                                     InnerRegion('4', Tube(), 4)]
-        assert sim.particle_sources == [ParticleSourceConf('a', Box()).make(),
-                                        ParticleSourceConf('c', Cylinder()).make(),
-                                        ParticleSourceConf('d', Tube(start=(0, 0, 0), end=(0, 0, 1))).make()]
-        assert sim.electric_fields == FieldUniform('x', 'electric', np.array((-2, -2, 1)))
-        assert sim.magnetic_fields == FieldExpression('y', 'magnetic', '0', '0', '3*x + sqrt(y) - z**2')
+        assert_dataclass_eq(sim.potential, self.Array(sim.mesh, (), expected))
+        _assert_value_eq(sim.inner_regions, [InnerRegion('1', Box(), 1),
+                                             InnerRegion('2', Sphere(), -2),
+                                             InnerRegion('3', Cylinder(), 0),
+                                             InnerRegion('4', Tube(), 4)])
+        _assert_value_eq(sim.particle_sources, [ParticleSourceConf('a', Box()).make(),
+                                                ParticleSourceConf('c', Cylinder()).make(),
+                                                ParticleSourceConf('d', Tube(start=(0, 0, 0), end=(0, 0, 1))).make()])
+        assert_dataclass_eq(sim.electric_fields, FieldUniform('x', 'electric', np.array((-2, -2, 1))))
+        assert_dataclass_eq(sim.magnetic_fields, FieldExpression('y', 'magnetic', '0', '0', '3*x + sqrt(y) - z**2'))
         assert sim.particle_interaction_model == Model.binary
 
     @pytest.mark.parametrize('model', ['noninteracting', 'PIC', 'binary'])

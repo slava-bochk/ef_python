@@ -6,11 +6,12 @@ from pytest import raises
 
 from ef.config.components import time_grid
 from ef.time_grid import TimeGrid
+from ef.util.testing import assert_dataclass_eq
 
 
 class TestTimeGrid:
     def test_init(self):
-        assert TimeGrid(100.0, 1.0, 10.0) == TimeGrid(100, 1, 10)
+        assert_dataclass_eq(TimeGrid(100.0, 1.0, 10.0), TimeGrid(100, 1, 10))
         t = TimeGrid(123, 3, 13)
         assert t.total_time == 123
         assert t.total_nodes == 42
@@ -49,12 +50,12 @@ class TestTimeGrid:
                                                   'current_node': 123}
 
     def test_config_make(self):
-        assert time_grid.TimeGridConf().make() == TimeGrid(100.0, 1.0, 10.0)
-        assert time_grid.TimeGridConf(123, 13, 3).make() == TimeGrid(123, 3, 13)
+        assert_dataclass_eq(time_grid.TimeGridConf().make(), TimeGrid(100.0, 1.0, 10.0))
+        assert_dataclass_eq(time_grid.TimeGridConf(123, 13, 3).make(), TimeGrid(123, 3, 13))
 
     def test_to_component(self):
-        assert TimeGrid(100, 1, 10).to_component() == time_grid.TimeGridConf(100, 10, 1)
-        assert TimeGrid(123, 3, 13).to_component() == time_grid.TimeGridConf(123, 12, 3)
+        assert_dataclass_eq(TimeGrid(100, 1, 10).to_component(), time_grid.TimeGridConf(100, 10, 1))
+        assert_dataclass_eq(TimeGrid(123, 3, 13).to_component(), time_grid.TimeGridConf(123, 12, 3))
 
     def test_update_next_step(self):
         t = TimeGrid(100, 1, 10, 123)
@@ -80,7 +81,7 @@ class TestTimeGrid:
             grid1.export_h5(h5file.create_group("/gr"))
         with h5py.File(bio, mode="r") as h5file:
             grid2 = TimeGrid.import_h5(h5file["/gr"])
-        assert grid1 == grid2
+        assert_dataclass_eq(grid1, grid2)
 
     def test_print(self):
         grid = TimeGrid(100, 1, 10)
