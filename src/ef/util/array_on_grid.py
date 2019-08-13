@@ -94,6 +94,7 @@ class ArrayOnGrid(SerializableH5):
         :param positions: array of shape (np, 3)
         :return: array of shape (np, {F})
         """
+        positions = self.xp.asarray(positions)
         o, s = self.origin, self.size
         xyz = tuple(self.xp.linspace(o[i], o[i] + s[i], self.n_nodes[i]) for i in (0, 1, 2))
         interpolator = RegularGridInterpolator(xyz, self._data, bounds_error=False, fill_value=0)

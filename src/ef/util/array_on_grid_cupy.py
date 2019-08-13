@@ -2,7 +2,6 @@ import operator
 from functools import reduce
 
 import numpy
-from scipy.interpolate import RegularGridInterpolator
 
 from ef.util.array_on_grid import ArrayOnGrid
 
@@ -85,6 +84,7 @@ class ArrayOnGridCupy(ArrayOnGrid):
         cupyx.scatter_add(a, slices, value)
 
     def interpolate_at_positions(self, positions):
+        positions = self.xp.asanyarray(positions)
         result = self.xp.empty(reduce(operator.mul, self.value_shape, positions.shape[0]))
         n = positions.shape[0]
         block = 128
