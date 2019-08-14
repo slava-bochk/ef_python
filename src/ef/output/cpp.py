@@ -6,12 +6,11 @@ from ef.field.on_grid import FieldOnGrid
 from ef.field.uniform import FieldUniform
 from ef.output import OutputWriterNumberedH5
 from ef.particle_array import ParticleArray
-from ef.simulation import Simulation
 from ef.util.physical_constants import speed_of_light
 
 
 class OutputWriterCpp(OutputWriterNumberedH5):
-    def do_write(self, sim: Simulation, h5file: File) -> None:
+    def do_write(self, sim: 'Simulation', h5file: File) -> None:
         gg = h5file.create_group('SpatialMesh')
         sim.mesh.export_h5(gg)
         for i, c in enumerate('xyz'):

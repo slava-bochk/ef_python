@@ -5,7 +5,6 @@ import numpy as np
 
 from ef.output import OutputWriter
 from ef.particle_interaction_model import Model
-from ef.simulation import Simulation
 from ef.util.serializable_h5 import tree_to_hdf5
 
 
@@ -18,7 +17,7 @@ class OutputWriterHistory(OutputWriter):
     def __del__(self):
         self.h5file.close()
 
-    def write(self, sim: Simulation, name: Optional[str] = None) -> None:
+    def write(self, sim: 'Simulation', name: Optional[str] = None) -> None:
         if name is not None:
             return  # don't write fields_without_particles etc.
         if self.h5file.get('history') is None:
@@ -34,7 +33,7 @@ class OutputWriterHistory(OutputWriter):
         if sim.particle_interaction_model == Model.PIC:
             h['/field/potential'][t] = sim.potential
 
-    def init_file(self, sim: Simulation, h5file: h5py.File) -> None:
+    def init_file(self, sim: 'Simulation', h5file: h5py.File) -> None:
         h = h5file.create_group('history')
         n_particles = sum(s.initial_number_of_particles +
                           s.particles_to_generate_each_step * sim.time_grid.total_nodes

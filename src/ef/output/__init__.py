@@ -3,21 +3,19 @@ from typing import Optional
 import h5py
 from h5py import File
 
-from ef.simulation import Simulation
-
 
 class OutputWriter:
-    def write(self, sim: Simulation, name: Optional[str] = None) -> None:
+    def write(self, sim: 'Simulation', name: Optional[str] = None) -> None:
         raise NotImplementedError()
 
 
 class OutputWriterNone(OutputWriter):
-    def write(self, sim: Simulation, name: Optional[str] = None) -> None:
+    def write(self, sim: 'Simulation', name: Optional[str] = None) -> None:
         pass
 
 
 class OutputReader:
-    def read(self) -> Simulation:
+    def read(self) -> 'Simulation':
         raise NotImplementedError()
 
 
@@ -30,10 +28,10 @@ class OutputWriterNumberedH5(OutputWriter):
         return f"{self.prefix}{specific_name}{self.suffix}"
 
     @classmethod
-    def get_filename(cls, sim: Simulation) -> str:
+    def get_filename(cls, sim: 'Simulation') -> str:
         return f"{sim.time_grid.current_node:07}"
 
-    def write(self, sim: Simulation, name: Optional[str] = None) -> None:
+    def write(self, sim: 'Simulation', name: Optional[str] = None) -> None:
         if name is None:
             name = self.get_filename(sim)
         name = self.format_filename(name)
@@ -42,5 +40,5 @@ class OutputWriterNumberedH5(OutputWriter):
             self.do_write(sim, h5file)
 
     @classmethod
-    def do_write(cls, sim: Simulation, h5file: File) -> None:
+    def do_write(cls, sim: 'Simulation', h5file: File) -> None:
         raise NotImplementedError()
