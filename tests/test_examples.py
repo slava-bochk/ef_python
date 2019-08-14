@@ -1,14 +1,13 @@
 import os
 import subprocess
-from os.path import basename
-from shutil import copytree, copy
+from shutil import copytree
 
 import inject
 import pytest
 
 from ef.config.config import Config
-from ef.main import main
 from ef.runner import Runner
+from ef.util.testing import assert_dataclass_eq
 
 _examples_conf = [("examples/axially_symmetric_beam_contour/contour.conf", pytest.mark.slow),
                   ("examples/minimal_working_example/minimal_conf.conf", ()),
@@ -84,8 +83,8 @@ def test_tube_source(tmpdir):
 def test_single_particle_in_free_space(tmpdir):
     run_jupyter("examples/single_particle_in_free_space", "single_particle_in_free_space.ipynb",
                 tmpdir.join('newdir'), True)
-    assert Config.from_fname(tmpdir.join('newdir').join('config.ini')) == \
-           Config.from_fname(tmpdir.join('newdir').join('single_particle_in_free_space.conf'))
+    assert_dataclass_eq(Config.from_fname(tmpdir.join('newdir').join('config.ini')),
+                        Config.from_fname(tmpdir.join('newdir').join('single_particle_in_free_space.conf')))
 
 
 @pytest.mark.slowish
