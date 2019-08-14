@@ -26,12 +26,12 @@ class OutputWriterHistory(OutputWriter):
         h = self.h5file['history']
         for p in sim.particle_arrays:
             for i, id_ in enumerate(p.ids):
-                h['/particles/position'][id_, t] = p.positions[i]
-                h['/particles/momentum'][id_, t] = p.momentums[i]
-                h['/particles/mass'][id_] = p.mass
-                h['/particles/charge'][id_] = p.charge
+                h['particles/position'][id_, t] = p.positions[i]
+                h['particles/momentum'][id_, t] = p.momentums[i]
+                h['particles/mass'][id_] = p.mass
+                h['particles/charge'][id_] = p.charge
         if sim.particle_interaction_model == Model.PIC:
-            h['/field/potential'][t] = sim.potential
+            h['field/potential'][t] = sim.potential
 
     def init_file(self, sim: 'Simulation', h5file: h5py.File) -> None:
         h = h5file.create_group('history')
