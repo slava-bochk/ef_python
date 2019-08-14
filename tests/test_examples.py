@@ -8,8 +8,10 @@ import pytest
 
 from ef.config.config import Config
 from ef.main import main
+from ef.runner import Runner
 
-_examples_conf = [("examples/minimal_working_example/minimal_conf.conf", ()),
+_examples_conf = [("examples/axially_symmetric_beam_contour/contour.conf", pytest.mark.slow),
+                  ("examples/minimal_working_example/minimal_conf.conf", ()),
                   ("examples/single_particle_in_free_space/single_particle_in_free_space.conf", pytest.mark.slowish),
                   ("examples/single_particle_in_radial_electric_field/single_particle_in_radial_electric_field.conf",
                    ()),
@@ -27,14 +29,10 @@ _pytest_params_example_conf = [pytest.param(f.replace('/', os.path.sep), marks=m
 
 
 @pytest.mark.parametrize("fname", _pytest_params_example_conf)
-def test_example_conf(fname, mocker, capsys, tmpdir, monkeypatch):
-    copy(fname, tmpdir.join(basename(fname)))
+def test_example_conf(fname, tmpdir, monkeypatch, backend_and_solver):
+    sim = Config.from_fname(fname).make()
     monkeypatch.chdir(tmpdir)
-    mocker.patch("sys.argv", ["main.py", str(basename(fname))])
-    main()
-    out, err = capsys.readouterr()
-    assert err == ""
-    inject.clear()
+    Runner(sim).start()
 
 
 def run_jupyter(dir, fname, path=None, copy_dir=False):
