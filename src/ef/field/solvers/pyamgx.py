@@ -49,8 +49,9 @@ class FieldSolverPyamgx(FieldSolver):
 
     def transfer_solution_to_spat_mesh(self, potential):
         if potential.xp is numpy:
+            self._phi_vec.download(self.phi_vec)
             super().transfer_solution_to_spat_mesh(potential)
         else:
-            buf = potential.xp.empty_like(potential._data[1:-1, 1:-1, 1:-1])
+            buf = potential.xp.empty(int((self.mesh.n_nodes - 2).prod()))
             self._phi_vec.download_raw(buf.data.ptr)
             potential._data[1:-1, 1:-1, 1:-1] = buf.reshape(self.mesh.n_nodes - 2, order='F')
