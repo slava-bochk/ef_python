@@ -9,7 +9,8 @@ from ef.meshgrid import MeshGrid
 
 
 class FieldSolver:
-    def __init__(self, mesh: MeshGrid, inner_regions: List[InnerRegion]):
+    def __init__(self, mesh: MeshGrid, inner_regions: List[InnerRegion],
+                 tolerance: float = 1e-10, max_iter: int = 1000):
         if inner_regions:
             print("WARNING: field-solver: inner region support is untested")
             print("WARNING: proceed with caution")
@@ -20,7 +21,8 @@ class FieldSolver:
         self.A = self.construct_equation_matrix()
         self.phi_vec = np.empty(nrows)
         self.rhs = np.empty_like(self.phi_vec)
-        self.create_solver_and_preconditioner()
+        self.tolerance = tolerance
+        self.max_iter = max_iter
 
     def construct_equation_matrix(self):
         nx, ny, nz = self.mesh.n_nodes - 2
@@ -85,13 +87,7 @@ class FieldSolver:
         data[np.logical_and(row == col, mask)] = 1.
         return scipy.sparse.coo_matrix((data, (row, col)), shape=matrix.shape)
 
-    def create_solver_and_preconditioner(self):
-        raise NotImplementedError()
-
     def eval_potential(self, charge_density, potential):
-        self.solve_poisson_eqn(charge_density, potential)
-
-    def solve_poisson_eqn(self, charge_density, potential):
         raise NotImplementedError()
 
     def init_rhs_vector(self, charge_density, potential):
