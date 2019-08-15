@@ -93,7 +93,7 @@ class Simulation(SerializableH5):
         if self.particle_interaction_model == Model.PIC:
             self.eval_charge_density()
             field_solver.eval_potential(self.charge_density, self.potential)
-            self.electric_field.array = self.potential.gradient()
+            self.potential.gradient(self.electric_field.array)
         self.shift_new_particles_velocities_half_time_step_back()
         self.consolidate_particle_arrays()
 

@@ -92,22 +92,3 @@ class ArrayOnGridCupy(ArrayOnGrid):
         self._interpolate_field((grid,), (block,), (n, self._data.ravel(order='C'), positions.ravel(order='C'), result))
         result = result.reshape((positions.shape[0], *self.value_shape))
         return result
-
-    def gradient(self):
-        # based on numpy.gradient simplified for our case
-        if self.value_shape != ():
-            raise ValueError("Trying got compute gradient for a non-scalar field: ambiguous")
-        if any(n < 2 for n in self.n_nodes):
-            raise ValueError("ArrayOnGrid too small to compute gradient")
-        f = self._data
-        result = self.xp.empty((3, *self.n_nodes))
-
-        internal = slice(1, -1)
-        to_left = slice(None, -2)
-        to_right = slice(2, None)
-        for axis, dx in enumerate(self.cell):
-            on_axis = lambda s: tuple(s if i == axis else slice(None) for i in range(3))
-            result[axis][on_axis(internal)] = -(f[on_axis(to_right)] - f[on_axis(to_left)]) / (2. * dx)
-            result[axis][on_axis(0)] = -(f[on_axis(1)] - f[on_axis(0)]) / dx
-            result[axis][on_axis(-1)] = -(f[on_axis(-1)] - f[on_axis(-2)]) / dx
-        return self.__class__(self.grid, 3, self.xp.moveaxis(result, 0, -1))

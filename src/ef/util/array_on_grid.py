@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy
 from scipy.interpolate import RegularGridInterpolator
 
@@ -100,10 +102,25 @@ class ArrayOnGrid(SerializableH5):
         interpolator = RegularGridInterpolator(xyz, self._data, bounds_error=False, fill_value=0)
         return interpolator(positions)
 
-    def gradient(self):
+    def gradient(self, output_array: Optional['ArrayOnGrid'] = None) -> 'ArrayOnGrid':
+        # based on numpy.gradient simplified for our case
         if self.value_shape != ():
             raise ValueError("Trying got compute gradient for a non-scalar field: ambiguous")
-        return ArrayOnGrid(self.grid, 3, -self.xp.stack(self.xp.gradient(self._data, *self.cell), -1))
+        if any(n < 2 for n in self.n_nodes):
+            raise ValueError("ArrayOnGrid too small to compute gradient")
+        f = self._data
+        if output_array is None:
+            output_array = self.__class__(self.grid, 3)
+        result = output_array._data
+        internal = slice(1, -1)
+        to_left = slice(None, -2)
+        to_right = slice(2, None)
+        for axis, dx in enumerate(self.cell):
+            on_axis = lambda s: tuple(s if i == axis else slice(None) for i in range(3))
+            result[(*on_axis(internal), axis)] = (f[on_axis(to_left)] - f[on_axis(to_right)]) / (2. * dx)
+            result[(*on_axis(0), axis)] = (f[on_axis(0)] - f[on_axis(1)]) / dx
+            result[(*on_axis(-1), axis)] = (f[on_axis(-2)] - f[on_axis(-1)]) / dx
+        return output_array
 
     @property
     def is_the_same_on_all_boundaries(self):
