@@ -3,6 +3,7 @@ import numpy as np
 import pytest
 from numpy.testing import assert_array_equal, assert_array_almost_equal
 from pytest import raises
+from scipy.interpolate import RegularGridInterpolator
 
 from ef.meshgrid import MeshGrid
 from ef.util.array_on_grid import ArrayOnGrid
@@ -88,12 +89,20 @@ class TestArrayOnGrid:
                                                                0, 0, 0, 0,
                                                                0, 0.25, -0.25, 0])
         self.assert_ae(a.interpolate_at_positions(positions[1:2]), self.xp.array([1.]))
+        a = self.Array(MeshGrid((100, 20, 33), (101, 44, 77)), None, np.arange(101 * 44 * 77, dtype=float).reshape((101, 44, 77)))
+        positions = np.linspace((0, 0, 0), (99, 13, 23), 314)
+        o, s = np.zeros(3), np.array([100, 20, 33])
+        xyz = tuple(np.linspace(o[i], o[i] + s[i], a.n_nodes[i]) for i in (0, 1, 2))
+        interpolator = RegularGridInterpolator(xyz, a.data, bounds_error=False, fill_value=0)
+        r1 = a.interpolate_at_positions(self.xp.asarray(positions))
+        self.assert_almost_ae(r1, interpolator(positions))
 
     def test_interpolate_vector(self):
         a = self.Array(MeshGrid((2, 4, 8), (3, 3, 3)), 3, self.xp.full((3, 3, 3, 3), 100))
         a._data[1:2, 0:2, 0:2] = self.xp.array([[[2, 1, 0], [-3, 1, 0]],
                                                 [[0, -1, 0], [-1, 0, 0]]])
-        self.assert_ae(a.interpolate_at_positions(self.xp.array([(1, 1, 3)], dtype=float)), self.xp.array([(-1.25, 0.375, 0)]))
+        self.assert_ae(a.interpolate_at_positions(self.xp.array([(1, 1, 3)], dtype=float)),
+                       self.xp.array([(-1.25, 0.375, 0)]))
         self.assert_ae(a.interpolate_at_positions(self.xp.array([(1, 1, 3), (2, 1, 3), (1.5, 1, 3)], dtype=float)),
                        self.xp.array([(-1.25, 0.375, 0),
                                       (100, 100, 100),

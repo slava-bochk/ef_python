@@ -1,4 +1,5 @@
 import numpy
+from scipy.interpolate import RegularGridInterpolator
 
 from ef.util.array_on_grid import ArrayOnGrid
 
@@ -85,6 +86,10 @@ class ArrayOnGridCupy(ArrayOnGrid):
         block = 128
         grid = (n - 1) // block + 1
         self._interpolate_field((grid,), (block,), (n, self._data, positions, result))
+        o, s = self.origin.get(), self.size.get()
+        xyz = tuple(numpy.linspace(o[i], o[i] + s[i], self.n_nodes[i]) for i in (0, 1, 2))
+        interpolator = RegularGridInterpolator(xyz, self.data, bounds_error=False, fill_value=0)
+        cupy.testing.assert_array_almost_equal(result, interpolator(positions.get()))
         return result
 
     def gradient(self):
