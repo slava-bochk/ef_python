@@ -1,4 +1,8 @@
-import itertools
+import operator
+from functools import reduce
+
+import numpy
+from scipy.interpolate import RegularGridInterpolator
 
 from ef.util.array_on_grid import ArrayOnGrid
 
@@ -12,6 +16,44 @@ class ArrayOnGridCupy(ArrayOnGrid):
     def __init__(self, grid, value_shape=None, data=None):
         self.xp = cupy
         super().__init__(grid, value_shape, data)
+        self._interpolate_field = cupy.RawKernel(r'''
+        extern "C" __global__
+        void interpolate_field(int size, const double* field, const double* coords, double* result) {{
+            int tid = blockDim.x * blockIdx.x + threadIdx.x;
+            if (tid < size) {{
+                double x = coords[3 * tid]/{c[0]};
+                double y = coords[3 * tid + 1]/{c[1]};
+                double z = coords[3 * tid + 2]/{c[2]};
+                int x0 = int(x);
+                int y0 = int(y);
+                int z0 = int(z);
+                double dx = x - x0;
+                double dy = y - y0;
+                double dz = z - z0;
+                if (x0<0 | y0<0 | z0<0 |
+                    (x0>={n[0]}-1 & dx>0) | 
+                    (y0>={n[1]}-1 & dy>0) | 
+                    (z0>={n[2]}-1 & dz>0) ) {{
+                    result[tid] = 0;
+                }} else {{
+                    int where = ((x0*{n[1]} + y0)*{n[2]} + z0) * {v};
+                    for (int q=0; q<{v}; q++) {{
+                        int wq = where + q;
+                        result[tid * {v} + q] =
+                            field[wq] * (1.0 - dx) * (1.0 - dy) * (1.0 - dz) + 
+                            field[wq + {v}] * (1.0 - dx) * (1.0 - dy) * dz +
+                            field[wq + {v}*{n[2]}] * (1.0 - dx) * dy * (1.0 - dz) + 
+                            field[wq + {v}*{n[2]} + {v}] * (1.0 - dx) * dy * dz +
+                            field[wq + {v}*{n[1]}*{n[2]}] * dx * (1.0 - dy) * (1.0 - dz) + 
+                            field[wq + {v}*{n[1]}*{n[2]} + {v}] * dx * (1.0 - dy) * dz +
+                            field[wq + {v}*{n[1]}*{n[2]} + {v}*{n[2]}] * dx * dy * (1.0 - dz) + 
+                            field[wq + {v}*{n[1]}*{n[2]} + {v}*{n[2]} + {v}] * dx * dy * dz;
+                    }}
+                }}
+            }}
+        }}
+        '''.format(c=grid.cell, n=grid.n_nodes, s=grid.size, v=numpy.prod(self.value_shape, dtype=int)),
+                                                 'interpolate_field')
         self._cell = self.xp.array(grid.cell)
         self._size = self.xp.array(grid.size)
         self._origin = self.xp.array(grid.origin)
@@ -43,22 +85,13 @@ class ArrayOnGridCupy(ArrayOnGrid):
         cupyx.scatter_add(a, slices, value)
 
     def interpolate_at_positions(self, positions):
-        positions = self.xp.asarray(positions)
-        node, remainder = self.xp.divmod(positions - self.origin, self.cell)
-        node = node.astype(int)  # shape is (p, 3)
-        weight = remainder / self.cell  # shape is (np, 3)
-        w = self.xp.stack([1. - weight, weight], axis=-2)  # shape is (np, 2, 3)
-        dn = self.xp.array(list(itertools.product((0, 1), repeat=3)))  # shape is (8, 3)
-        nodes_to_use = node[..., self.xp.newaxis, :] + dn  # shape is (np, 8, 3)
-        out_of_bounds = self.xp.logical_or(nodes_to_use >= self.xp.asarray(self.n_nodes[:3]),
-                                           nodes_to_use < 0).any(axis=-1)  # (np, 8)
-        field_on_nodes = self.xp.empty((len(positions), 8, *self.value_shape))  # (np, 8, F)
-        field_on_nodes[out_of_bounds] = 0  # (oob(np*8), F) interpolate out-of-bounds field as 0
-        nodes_in_bounds = nodes_to_use[~out_of_bounds].transpose()  # 3, ib(np*8)
-        field_on_nodes[~out_of_bounds] = self._data[tuple(nodes_in_bounds)]  # (ib(np*8), F)
-        weight_on_nodes = w[..., dn[:, self.xp.array((0, 1, 2))], self.xp.array((0, 1, 2))].prod(-1)  # shape is (np, 8)
-        return self.xp.moveaxis((self.xp.moveaxis(field_on_nodes, (0, 1), (-2, -1)) * weight_on_nodes)
-                                .sum(axis=-1), -1, 0).get()  # shape is (np, F)
+        result = self.xp.empty(reduce(operator.mul, self.value_shape, positions.shape[0]))
+        n = positions.shape[0]
+        block = 128
+        grid = (n - 1) // block + 1
+        self._interpolate_field((grid,), (block,), (n, self._data.ravel(order='C'), positions.ravel(order='C'), result))
+        result = result.reshape((positions.shape[0], *self.value_shape))
+        return result
 
     def gradient(self):
         # based on numpy.gradient simplified for our case

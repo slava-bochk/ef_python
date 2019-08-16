@@ -15,7 +15,7 @@ class ArrayOnGrid(SerializableH5):
         if data is None:
             self._data = self.zero
         else:
-            data = self.xp.array(data)
+            data = self.xp.array(data, dtype=self.xp.float)
             if data.shape != self.n_nodes:
                 raise ValueError("Unexpected raw data array shape: {} for this ArrayOnGrid shape: {}".format(
                     data.shape, self.n_nodes
@@ -118,4 +118,3 @@ class ArrayOnGrid(SerializableH5):
         self._data[-1, :, :] = boundary_conditions.left
         self._data[:, :, 0] = boundary_conditions.near
         self._data[:, :, -1] = boundary_conditions.far
-

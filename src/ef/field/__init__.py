@@ -1,3 +1,4 @@
+import inject
 import numpy as np
 
 from ef.util.serializable_h5 import SerializableH5
@@ -39,8 +40,11 @@ class Field(SerializableH5):
 
 
 class FieldZero(Field):
+    xp = inject.attr(np)
+
     def get_at_points(self, positions, time):
-        return np.zeros_like(positions)
+        positions = self.xp.array(positions)
+        return self.xp.zeros_like(positions)
 
 
 class FieldSum(Field):

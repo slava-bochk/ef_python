@@ -21,20 +21,6 @@ from ef.util.array_on_grid import ArrayOnGrid
 
 
 class TestSimulation:
-    sim_full_config = Config(TimeGridConf(200, 20, 2), SpatialMeshConf((5, 5, 5), (.1, .1, .1)),
-                             sources=[ParticleSourceConf('a', Box()),
-                                      ParticleSourceConf('c', Cylinder()),
-                                      ParticleSourceConf('d', Tube(start=(0, 0, 0), end=(0, 0, 1)))],
-                             inner_regions=[InnerRegionConf('1', Box(), 1),
-                                            InnerRegionConf('2', Sphere(), -2),
-                                            InnerRegionConf('3', Cylinder(), 0),
-                                            InnerRegionConf('4', Tube(), 4)],
-                             output_file=OutputFileConf(), boundary_conditions=BoundaryConditionsConf(-2.7),
-                             particle_interaction_model=ParticleInteractionModelConf('binary'),
-                             external_fields=[ExternalElectricFieldUniformConf('x', (-2, -2, 1)),
-                                              ExternalMagneticFieldExpressionConf('y',
-                                                                                  ('0', '0', '3*x + sqrt(y) - z**2'))])
-
     Array: Type[ArrayOnGrid] = inject.attr(ArrayOnGrid)
 
     def test_init_from_config(self, backend):
@@ -55,7 +41,21 @@ class TestSimulation:
         assert sim.particle_interaction_model == Model.PIC
 
     def test_all_config(self, backend):
-        efconf = self.sim_full_config
+        efconf = Config(TimeGridConf(200, 20, 2), SpatialMeshConf((5, 5, 5), (.1, .1, .1)),
+                        sources=[ParticleSourceConf('a', Box()),
+                                 ParticleSourceConf('c', Cylinder()),
+                                 ParticleSourceConf('d', Tube(start=(0, 0, 0), end=(0, 0, 1)))],
+                        inner_regions=[InnerRegionConf('1', Box(), 1),
+                                       InnerRegionConf('2', Sphere(), -2),
+                                       InnerRegionConf('3', Cylinder(), 0),
+                                       InnerRegionConf('4', Tube(), 4)],
+                        output_file=OutputFileConf(), boundary_conditions=BoundaryConditionsConf(-2.7),
+                        particle_interaction_model=ParticleInteractionModelConf('binary'),
+                        external_fields=[ExternalElectricFieldUniformConf('x', (-2, -2, 1)),
+                                         ExternalMagneticFieldExpressionConf('y',
+                                                                             ('0', '0',
+                                                                              '3*x + sqrt(y) - z**2'))])
+
         parser = ConfigParser()
         parser.read_string(efconf.export_to_string())
         conf = Config.from_configparser(parser)
@@ -107,7 +107,7 @@ class TestSimulation:
         Runner(sim).start()
         assert len(sim.particle_sources) == 2
         assert len(sim.particle_arrays) == 1
-        assert_array_equal(sim.particle_arrays[0].ids, range(100))
+        sim.particle_arrays[0].xp.testing.assert_array_equal(sim.particle_arrays[0].ids, range(100))
 
     def test_particle_generation(self, monkeypatch, tmpdir, backend_and_solver):
         monkeypatch.chdir(tmpdir)

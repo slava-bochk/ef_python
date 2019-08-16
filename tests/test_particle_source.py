@@ -3,14 +3,15 @@ from math import sqrt
 
 import h5py
 import numpy as np
+import pytest
 from numpy.random.mtrand import RandomState
-from numpy.testing import assert_array_equal, assert_array_almost_equal
+from numpy.testing import assert_array_equal
 
 from ef.config.components import Box
 from ef.particle_array import ParticleArray
 from ef.particle_source import ParticleSource
 
-
+@pytest.mark.usefixtures("backend")
 class TestParticleSource:
     def test_init(self):
         p = ParticleSource()
@@ -43,14 +44,16 @@ class TestParticleSource:
         ps = ParticleSource()
         ps._generator = RandomState(123)
         p = ps.generate_num_of_particles(100)
-        assert_array_equal(p.positions, Box().generate_uniform_random_posititons(RandomState(123), 100))
+        assert_ae = p.xp.testing.assert_array_equal
+        assert_ae(p.positions, Box().generate_uniform_random_posititons(RandomState(123), 100))
 
-    def test_generate_momentums(self):
+    def test_generate_momentums(self, backend):
         ps = ParticleSource(mean_momentum=(3, -2, 0), temperature=10, mass=.3)
         ps._generator = RandomState(123)
         p = ps.generate_num_of_particles(1000000)
-        assert_array_almost_equal(p.momentums.mean(axis=0), (3, -2, 0), 2)
-        assert_array_almost_equal(((p.momentums-[3, -2, 0]).std(axis=0)), np.full(3, sqrt(3)), 2)
+        assert_almost_ae = p.xp.testing.assert_array_almost_equal
+        assert_almost_ae(p.momentums.mean(axis=0), (3, -2, 0), 2)
+        assert_almost_ae(((p.momentums - p.xp.array([3, -2, 0])).std(axis=0)), np.full(3, sqrt(3)), 2)
 
     def test_write_h5(self):
         f = BytesIO()

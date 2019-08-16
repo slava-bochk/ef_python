@@ -132,7 +132,7 @@ class Simulation(SerializableH5):
         for src in self.particle_sources:
             particles = src.generate_initial_particles() if initial else src.generate_each_step()
             if len(particles.ids):
-                particles.ids = self.particle_tracker.generate_particle_ids(len(particles.ids))
+                particles.ids = particles.xp.asarray(self.particle_tracker.generate_particle_ids(len(particles.ids)))
                 self.particle_arrays.append(particles)
 
     def consolidate_particle_arrays(self):
@@ -142,8 +142,8 @@ class Simulation(SerializableH5):
         self.particle_arrays = []
         for k, v in particles_by_type.items():
             mass, charge, shifted = k
-            ids = np.concatenate([p.ids for p in v])
-            positions = np.concatenate([p.positions for p in v])
-            momentums = np.concatenate([p.momentums for p in v])
+            ids = v[0].xp.concatenate([p.ids for p in v])
+            positions = v[0].xp.concatenate([p.positions for p in v])
+            momentums = v[0].xp.concatenate([p.momentums for p in v])
             if len(ids):
                 self.particle_arrays.append(ParticleArray(ids, charge, mass, positions, momentums, shifted))

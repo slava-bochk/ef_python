@@ -15,7 +15,7 @@ class InnerRegion(SerializableH5):
 
     def collide_with_particles(self, particles):
         collisions = self.check_if_points_inside(particles.positions)
-        c = np.count_nonzero(collisions)
+        c = self.shape.xp.count_nonzero(collisions)
         self.total_absorbed_particles += c
         self.total_absorbed_charge += c * particles.charge
         particles.remove(collisions)
@@ -23,7 +23,7 @@ class InnerRegion(SerializableH5):
     def check_if_points_inside(self, positions):
         pos_inside = self.shape.are_positions_inside(positions)
         if self.inverted:
-            pos_inside = np.logical_not(pos_inside)
+            pos_inside = self.shape.xp.logical_not(pos_inside)
         return pos_inside
 
     @staticmethod

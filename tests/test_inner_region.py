@@ -1,10 +1,12 @@
 import numpy as np
+import pytest
 
+from ef.config.components import Box
 from ef.inner_region import InnerRegion
 from ef.particle_array import ParticleArray
-from ef.config.components import Box
 
 
+@pytest.mark.usefixtures('backend')
 class TestInnerRegion:
     def test_init(self):
         ir = InnerRegion('test', Box())

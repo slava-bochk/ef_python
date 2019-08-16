@@ -63,6 +63,7 @@ class FieldSolver:
         potential = np.empty_like(n, np.float)
         for ir in inner_regions:
             mask = ir.check_if_points_inside(xyz)
+            mask = mask.get() if hasattr(mask, 'get') else mask
             if np.logical_and.reduce([mask, inside, potential != ir.potential]).any():
                 raise ValueError("Found intersecting inner regions with different potentials.")
             potential[mask] = ir.potential
@@ -112,7 +113,6 @@ class FieldSolver:
         self.rhs[self.nodes_in_regions] = self.potential_in_regions
 
     def transfer_solution_to_spat_mesh(self, potential):
-        # TODO: copy directly when using amgx and cupy
         potential._data[1:-1, 1:-1, 1:-1] = potential.xp.asarray(self.phi_vec.reshape(self.mesh.n_nodes - 2, order='F'))
 
     @staticmethod

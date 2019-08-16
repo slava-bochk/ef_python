@@ -1,3 +1,5 @@
+import inject
+
 __all__ = ["InnerRegionConf", "InnerRegionBoxSection", "InnerRegionCylinderSection",
            "InnerRegionTubeSection", "InnerRegionSphereSection", "InnerRegionConeAlongZSection"]
 
@@ -10,7 +12,8 @@ from ef.config.section import NamedConfigSection
 
 
 class InnerRegionConf(ConfigComponent):
-    def __init__(self, name="InnerRegion1", shape=Box(), potential=0):
+    @inject.params(shape=Box)
+    def __init__(self, name="InnerRegion1", shape=None, potential=0):
         self.name = name
         self.shape = shape
         self.potential = float(potential)
