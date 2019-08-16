@@ -22,7 +22,7 @@ class FieldSolverPyamgx(FieldSolver):
         conf_string = f"""{{
             "config_version": 2,
             "solver": {{
-                "solver": "CG",
+                "solver": "BICGSTAB",
                 "max_iters": {self.max_iter},
                 "monitor_residual": 1,
                 "tolerance": {self.tolerance},
