@@ -24,36 +24,41 @@ class FieldSolver:
 
     def construct_equation_matrix(self):
         nx, ny, nz = self.mesh.n_nodes - 2
+        size = nx * ny * nz
         cx, cy, cz = self.mesh.cell ** 2
         dx, dy, dz = cy * cz, cx * cz, cx * cy
-        matrix = dx * self.construct_d2dx2_in_3d(nx, ny, nz) + \
-                 dy * self.construct_d2dy2_in_3d(nx, ny, nz) + \
-                 dz * self.construct_d2dz2_in_3d(nx, ny, nz)
-        return self.zero_nondiag_for_nodes_inside_objects(matrix)
+        diag_dx = self.get_diag_d2dx2_in_3d(nx, ny, nz, dx)
+        diag_dy = self.get_diag_d2dy2_in_3d(nx, ny, nz, dy)
+        i = np.concatenate((np.arange(size),
+                            np.arange(size - 1), np.arange(1, size),
+                            np.arange(size - nx), np.arange(nx, size),
+                            np.arange(size - nx * ny), np.arange(nx * ny, size)))
+        j = np.concatenate((np.arange(size),
+                            np.arange(1, size), np.arange(size - 1),
+                            np.arange(nx, size), np.arange(size - nx),
+                            np.arange(nx * ny, size), np.arange(size - nx * ny)))
+        values = np.concatenate((np.full(size, -2.0 * (dx + dy + dz)),
+                                 diag_dx, diag_dx,
+                                 diag_dy, diag_dy,
+                                 np.full(size - nx * ny, dz), np.full(size - nx * ny, dz)))
+        matrix = scipy.sparse.coo_matrix((values, (i, j)), shape=(size, size))
+        return self.zero_nondiag_for_nodes_inside_objects(matrix).tocsr()
 
     @staticmethod
-    def construct_d2dx2_in_3d(nx, ny, nz):
+    def get_diag_d2dx2_in_3d(nx, ny, nz, dx):
         diag_offset = 1
         block_size = nx
-        block = scipy.sparse.diags([1.0, -2.0, 1.0], [-diag_offset, 0, diag_offset], shape=(block_size, block_size),
-                                   format='coo')
-        big_block = scipy.sparse.block_diag([block] * nz, format='coo')
-        return scipy.sparse.block_diag([big_block] * ny, format='csr')
+        ones = np.full(block_size - diag_offset, dx)
+        zeros = np.zeros(diag_offset)
+        return np.concatenate([ones, zeros] * (ny * nz))[:-diag_offset]
 
     @staticmethod
-    def construct_d2dy2_in_3d(nx, ny, nz):
+    def get_diag_d2dy2_in_3d(nx, ny, nz, dy):
         diag_offset = nx
         block_size = nx * ny
-        block = scipy.sparse.diags([1.0, -2.0, 1.0], [-diag_offset, 0, diag_offset], shape=(block_size, block_size),
-                                   format='coo')
-        return scipy.sparse.block_diag([block] * nz, format='csr')
-
-    @staticmethod
-    def construct_d2dz2_in_3d(nx, ny, nz):
-        diag_offset = nx * ny
-        block_size = nx * ny * nz
-        return scipy.sparse.diags([1.0, -2.0, 1.0], [-diag_offset, 0, diag_offset], shape=(block_size, block_size),
-                                  format='csr')
+        ones = np.full(block_size - diag_offset, dy)
+        zeros = np.zeros(diag_offset)
+        return np.concatenate([ones, zeros] * nz)[:-diag_offset]
 
     def generate_nodes_in_regions(self, inner_regions):
         ijk = self._double_index[:, 1:]
@@ -71,16 +76,14 @@ class FieldSolver:
         indices = n[inside]
         return indices, potential[indices]
 
-    def zero_nondiag_for_nodes_inside_objects(self, matrix):
-        for i in self.nodes_in_regions:
-            csr_row_start = matrix.indptr[i]
-            csr_row_end = matrix.indptr[i + 1]
-            for t in range(csr_row_start, csr_row_end):
-                if matrix.indices[t] != i:
-                    matrix.data[t] = 0
-                else:
-                    matrix.data[t] = 1
-        return matrix
+    def zero_nondiag_for_nodes_inside_objects(self, matrix: scipy.sparse.coo_matrix):
+        data = matrix.data
+        row = matrix.row
+        col = matrix.col
+        mask = np.any(row[np.newaxis, :] == self.nodes_in_regions[:, np.newaxis], axis=0)
+        data[mask] = 0.
+        data[np.logical_and(row == col, mask)] = 1.
+        return scipy.sparse.coo_matrix((data, (row, col)), shape=matrix.shape)
 
     def create_solver_and_preconditioner(self):
         raise NotImplementedError()
@@ -96,7 +99,6 @@ class FieldSolver:
         self.set_rhs_for_nodes_inside_objects()
 
     def init_rhs_vector_in_full_domain(self, charge_density, potential):
-        # TODO: use cupy with amgx?
         charge = charge_density.data
         pot = potential.data
         rhs = -4 * np.pi * self.mesh.cell.prod() ** 2 * charge[1:-1, 1:-1, 1:-1]
@@ -118,5 +120,5 @@ class FieldSolver:
     @staticmethod
     def double_index(n_nodes):
         nx, ny, nz = n_nodes - 2
-        return np.array([(i + j * nx + k * nx * ny, i + 1, j + 1, k + 1)
-                         for k in range(nz) for j in range(ny) for i in range(nx)])
+        i, j, k = np.mgrid[0:nx, 0:ny, 0:nz].reshape((3, -1), order='F')
+        return np.column_stack((i + j * nx + k * nx * ny, i + 1, j + 1, k + 1))
