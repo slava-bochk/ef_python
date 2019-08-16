@@ -1,3 +1,6 @@
+import operator
+from functools import reduce
+
 import numpy
 from scipy.interpolate import RegularGridInterpolator
 
@@ -27,25 +30,26 @@ class ArrayOnGridCupy(ArrayOnGrid):
                 double dx = x - x0;
                 double dy = y - y0;
                 double dz = z - z0;
-                int where = ((x0*{n[1]} + y0)*{n[2]} + z0) * {v};
-                for (int q=0; q<{v}; q++) {{
-                    int wq = where + q;
-                    result[tid * {v} + q] =
-                        field[wq] * (1.0 - dx) * (1.0 - dy) * (1.0 - dz) + 
-                        field[wq + {v}] * (1.0 - dx) * (1.0 - dy) * dz +
-                        field[wq + {v}*{n[2]}] * (1.0 - dx) * dy * (1.0 - dz) + 
-                        field[wq + {v}*{n[2]} + {v}] * (1.0 - dx) * dy * dz +
-                        field[wq + {v}*{n[1]}*{n[2]}] * dx * (1.0 - dy) * (1.0 - dz) + 
-                        field[wq + {v}*{n[1]}*{n[2]} + {v}] * dx * (1.0 - dy) * dz +
-                        field[wq + {v}*{n[1]}*{n[2]} + {v}*{n[2]}] * dx * dy * (1.0 - dz) + 
-                        field[wq + {v}*{n[1]}*{n[2]} + {v}*{n[2]} + {v}] * dx * dy * dz;
+                if (x0<0 | y0<0 | z0<0 |
+                    (x0>={n[0]}-1 & dx>0) | 
+                    (y0>={n[1]}-1 & dy>0) | 
+                    (z0>={n[2]}-1 & dz>0) ) {{
+                    result[tid] = 0;
+                }} else {{
+                    int where = ((x0*{n[1]} + y0)*{n[2]} + z0) * {v};
+                    for (int q=0; q<{v}; q++) {{
+                        int wq = where + q;
+                        result[tid * {v} + q] =
+                            field[wq] * (1.0 - dx) * (1.0 - dy) * (1.0 - dz) + 
+                            field[wq + {v}] * (1.0 - dx) * (1.0 - dy) * dz +
+                            field[wq + {v}*{n[2]}] * (1.0 - dx) * dy * (1.0 - dz) + 
+                            field[wq + {v}*{n[2]} + {v}] * (1.0 - dx) * dy * dz +
+                            field[wq + {v}*{n[1]}*{n[2]}] * dx * (1.0 - dy) * (1.0 - dz) + 
+                            field[wq + {v}*{n[1]}*{n[2]} + {v}] * dx * (1.0 - dy) * dz +
+                            field[wq + {v}*{n[1]}*{n[2]} + {v}*{n[2]}] * dx * dy * (1.0 - dz) + 
+                            field[wq + {v}*{n[1]}*{n[2]} + {v}*{n[2]} + {v}] * dx * dy * dz;
+                    }}
                 }}
-                if (x0<0) result[tid] = 0;
-                if (y0<0) result[tid] = 0;
-                if (z0<0) result[tid] = 0;
-                if (x0>{n[0]} and dx>0) result[tid] = 0;
-                if (y0>{n[1]} and dy>0) result[tid] = 0;
-                if (z0>{n[2]} and dz>0) result[tid] = 0;
             }}
         }}
         '''.format(c=grid.cell, n=grid.n_nodes, s=grid.size, v=numpy.prod(self.value_shape, dtype=int)),
@@ -81,15 +85,12 @@ class ArrayOnGridCupy(ArrayOnGrid):
         cupyx.scatter_add(a, slices, value)
 
     def interpolate_at_positions(self, positions):
-        result = self.xp.empty((positions.shape[0], *self.value_shape))
+        result = self.xp.empty(reduce(operator.mul, self.value_shape, positions.shape[0]))
         n = positions.shape[0]
         block = 128
         grid = (n - 1) // block + 1
-        self._interpolate_field((grid,), (block,), (n, self._data, positions, result))
-        o, s = self.origin.get(), self.size.get()
-        xyz = tuple(numpy.linspace(o[i], o[i] + s[i], self.n_nodes[i]) for i in (0, 1, 2))
-        interpolator = RegularGridInterpolator(xyz, self.data, bounds_error=False, fill_value=0)
-        cupy.testing.assert_array_almost_equal(result, interpolator(positions.get()))
+        self._interpolate_field((grid,), (block,), (n, self._data.ravel(order='C'), positions.ravel(order='C'), result))
+        result = result.reshape((positions.shape[0], *self.value_shape))
         return result
 
     def gradient(self):

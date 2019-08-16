@@ -89,9 +89,9 @@ class TestArrayOnGrid:
                                                                0, 0, 0, 0,
                                                                0, 0.25, -0.25, 0])
         self.assert_ae(a.interpolate_at_positions(positions[1:2]), self.xp.array([1.]))
-        a = self.Array(MeshGrid((100, 20, 33), (101, 44, 77)), None, np.arange(101 * 44 * 77, dtype=float).reshape((101, 44, 77)))
-        positions = np.linspace((0, 0, 0), (99, 13, 23), 314)
-        o, s = np.zeros(3), np.array([100, 20, 33])
+        a = self.Array(MeshGrid((100, 20, 100), (101, 44, 101)), None, np.arange(101 * 44 * 101, dtype=float).reshape((101, 44, 101)))
+        positions = np.linspace((0, 13, 100.1), (100.1, 0, 0), 314)
+        o, s = np.zeros(3), np.array([100, 20, 100])
         xyz = tuple(np.linspace(o[i], o[i] + s[i], a.n_nodes[i]) for i in (0, 1, 2))
         interpolator = RegularGridInterpolator(xyz, a.data, bounds_error=False, fill_value=0)
         r1 = a.interpolate_at_positions(self.xp.asarray(positions))
