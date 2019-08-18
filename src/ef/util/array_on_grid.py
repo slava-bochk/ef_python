@@ -67,11 +67,10 @@ class ArrayOnGrid(SerializableH5):
         volume_around_node = self.cell.prod()
         density = value / volume_around_node  # scalar
         pos = self.xp.asarray(positions) - self.origin
-        if self.xp.any((pos > self.size) | (pos < 0)):
-            raise ValueError("Position is out of meshgrid bounds")
         nodes, remainders = self.xp.divmod(pos, self.cell)  # (np, 3)
         nodes = nodes.astype(int)  # (np, 3)
         weights = remainders / self.cell  # (np, 3)
+        dn = self.xp.empty((3), dtype=int)
         for dx in (0, 1):
             wx = weights[:, 0] if dx else 1. - weights[:, 0]  # np
             for dy in (0, 1):
@@ -80,11 +79,11 @@ class ArrayOnGrid(SerializableH5):
                 for dz in (0, 1):
                     wz = weights[:, 2] if dz else 1. - weights[:, 2]  # np
                     w = wxy * wz  # np
-                    dn = self.xp.array((dx, dy, dz))
+                    dn[0] = dx
+                    dn[1] = dy
+                    dn[2] = dz
                     nodes_to_update = nodes + dn  # (np, 3)
-                    w_nz = w[w > 0]
-                    n_nz = nodes_to_update[w > 0]
-                    self.scatter_add(self._data, tuple(n_nz.transpose()), w_nz * density)
+                    self.scatter_add(self._data, tuple(nodes_to_update.transpose()), w * density)
 
     def scatter_add(self, a, slices, value):
         self.xp.add.at(a, slices, value)
