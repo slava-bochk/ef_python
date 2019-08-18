@@ -67,26 +67,21 @@ class ArrayOnGrid(SerializableH5):
         volume_around_node = self.cell.prod()
         density = value / volume_around_node  # scalar
         pos = self.xp.asarray(positions) - self.origin
-        if self.xp.any((pos > self.size) | (pos < 0)):
-            raise ValueError("Position is out of meshgrid bounds")
         nodes, remainders = self.xp.divmod(pos, self.cell)  # (np, 3)
         nodes = nodes.astype(int)  # (np, 3)
         weights = remainders / self.cell  # (np, 3)
-        for dx in (0, 1):
-            wx = weights[:, 0] if dx else 1. - weights[:, 0]  # np
-            for dy in (0, 1):
-                wy = weights[:, 1] if dy else 1. - weights[:, 1]  # np
-                wxy = wx * wy  # np
-                for dz in (0, 1):
-                    wz = weights[:, 2] if dz else 1. - weights[:, 2]  # np
-                    w = wxy * wz  # np
-                    dn = self.xp.array((dx, dy, dz))
-                    nodes_to_update = nodes + dn  # (np, 3)
-                    w_nz = w[w > 0]
-                    n_nz = nodes_to_update[w > 0]
-                    self.scatter_add(self._data, tuple(n_nz.transpose()), w_nz * density)
+        wx = self.xp.stack((weights[:, 0], 1. - weights[:, 0]), -1).reshape((-1, 2, 1, 1))  # np * 2 * 1 * 1
+        wy = self.xp.stack((weights[:, 1], 1. - weights[:, 1]), -1).reshape((-1, 1, 2, 1))  # np * 1 * 2 * 1
+        wz = self.xp.stack((weights[:, 2], 1. - weights[:, 2]), -1).reshape((-1, 1, 1, 2))  # np * 1 * 1 * 2
+        w = (wx * wy * wz).reshape((-1))  # np*8
+        dn = self.xp.array([[[(1, 1, 1), (1, 1, 0)], [(1, 0, 1), (1, 0, 0)]],
+                            [[(0, 1, 1), (0, 1, 0)], [(0, 0, 1), (0, 0, 0)]]]).reshape((8, 3))  # 8 * 3
+        nodes_to_update = (nodes[:, self.xp.newaxis] + dn).reshape((-1, 3))  # (np*8, 3)
+        self.scatter_add(self._data, tuple(nodes_to_update.transpose()), w * density)
 
     def scatter_add(self, a, slices, value):
+        slices = tuple(s[value != 0] for s in slices)
+        value = value[value != 0]
         self.xp.add.at(a, slices, value)
 
     def interpolate_at_positions(self, positions):
