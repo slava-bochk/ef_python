@@ -16,8 +16,8 @@ class InnerRegion(SerializableH5):
     def collide_with_particles(self, particles):
         collisions = self.check_if_points_inside(particles.positions)
         c = self.shape.xp.count_nonzero(collisions)
-        self.total_absorbed_particles += c
-        self.total_absorbed_charge += c * particles.charge
+        self.total_absorbed_particles += int(c)
+        self.total_absorbed_charge += float(c * particles.charge)
         particles.remove(collisions)
 
     def check_if_points_inside(self, positions):
