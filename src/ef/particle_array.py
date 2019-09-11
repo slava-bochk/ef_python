@@ -50,7 +50,7 @@ class ParticleArray(SerializableH5):
 
     def boris_update_momentums(self, dt, total_el_field, total_mgn_field):
         self.momentums = self._boris_update_momentums(self.charge, self.mass, self.momentums, dt, total_el_field,
-                                                     total_mgn_field)
+                                                      total_mgn_field)
 
     def boris_update_momentum_no_mgn(self, dt, total_el_field):
         self.momentums += self.charge * dt * self.xp.asarray(total_el_field)
@@ -58,13 +58,10 @@ class ParticleArray(SerializableH5):
     @classmethod
     def import_h5(cls, g):
         ga = g.attrs
-        return cls(ids=g['particle_id'], charge=float(ga['charge']), mass=float(ga['mass']),
-                   positions=cls.xp.moveaxis(
-                       cls.xp.array([g['position_{}'.format(c)] for c in 'xyz']),
-                       0, -1),
-                   momentums=cls.xp.moveaxis(
-                       cls.xp.array([g['momentum_{}'.format(c)] for c in 'xyz']),
-                       0, -1),
+        pos = cls.xp.stack(tuple(cls.xp.asarray(g['position_{}'.format(c)][()]) for c in 'xyz'), -1)
+        mom = cls.xp.stack(tuple(cls.xp.asarray(g['momentum_{}'.format(c)][()]) for c in 'xyz'), -1)
+        return cls(ids=g['particle_id'][()], charge=float(ga['charge']), mass=float(ga['mass']),
+                   positions=pos, momentums=mom,
                    momentum_is_half_time_step_shifted=True)
 
     def export_h5(self, g):
