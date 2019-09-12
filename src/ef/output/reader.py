@@ -49,7 +49,8 @@ class Reader:
         fields = [Field.import_h5(g) for g in h5file['ExternalFields'].values()]
         sources = [ParticleSource.import_h5(g) for g in h5file['ParticleSources'].values()]
         particles = [ParticleArray.import_h5(g) for g in h5file['ParticleSources'].values()]
-        max_id = int(max([p.ids.max() for p in particles], default=-1))
+        # cupy max has no `initial` argument
+        max_id = int(max([p.ids.max() if p.ids else -1 for p in particles], default=-1))
         g = h5file['SpatialMesh']
         mesh = MeshGrid.import_h5(g)
         charge = Reader.array_class(mesh, (), np.reshape(g['charge_density'], mesh.n_nodes))
