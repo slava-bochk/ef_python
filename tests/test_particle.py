@@ -14,15 +14,6 @@ class TestParticle:
     assert_ae = inject.attr(assert_array_equal)
     assert_almost_ae = inject.attr(assert_array_almost_equal)
 
-    def test_h5(self, tmpdir):
-        fname = tmpdir.join('test_particle.h5')
-        p1 = ParticleArray(123, -1.0, 2.0, (0., 0., 1.), (1., 0., 2.))
-        with h5py.File(fname, mode="w") as h5file:
-            p1.save_h5(h5file)
-        with h5py.File(fname, mode="r") as h5file:
-            p2 = ParticleArray.load_h5(h5file)
-        assert p1 == p2
-
     def test_update_positions(self):
         p = ParticleArray([123], -1.0, 2.0, [(0., 0., 1.)], [(1., 0., 3.)])
         p.update_positions(10.0)

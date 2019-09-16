@@ -73,15 +73,6 @@ class TestTimeGrid:
             t.update_to_next_step()
             assert t.should_save
 
-    def test_init_h5(self):
-        bio = BytesIO()
-        grid1 = TimeGrid(123, 3, 13, 111)
-        with h5py.File(bio, mode="w") as h5file:
-            grid1.save_h5(h5file.create_group("/gr"))
-        with h5py.File(bio, mode="r") as h5file:
-            grid2 = TimeGrid.load_h5(h5file["/gr"])
-        assert grid1 == grid2
-
     def test_import_h5(self, tmpdir):
         bio = BytesIO()
         grid1 = TimeGrid(123, 3, 13, 111)

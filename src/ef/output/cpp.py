@@ -1,4 +1,5 @@
 import numpy as np
+from h5py import File
 
 from ef.field.expression import FieldExpression
 from ef.field.on_grid import FieldOnGrid
@@ -9,11 +10,11 @@ from ef.util.physical_constants import speed_of_light
 
 
 class OutputWriterCpp(OutputWriterNumberedH5):
-    def do_write(self, sim, h5file):
+    def do_write(self, sim: 'Simulation', h5file: File) -> None:
         gg = h5file.create_group('SpatialMesh')
         sim.mesh.export_h5(gg)
         for i, c in enumerate('xyz'):
-            gg['electric_field_{}'.format(c)] = sim.electric_field.array.data[..., i].flatten()
+            gg[f'electric_field_{c}'] = sim.electric_field.array.data[..., i].flatten()
         gg['charge_density'] = sim.charge_density.data.flatten()
         gg['potential'] = sim.potential.data.flatten()
 
@@ -47,13 +48,13 @@ class OutputWriterCpp(OutputWriterNumberedH5):
             if s.__class__ is FieldUniform:
                 ft = 'electric_uniform'
                 for i, c in enumerate('xyz'):
-                    sg.attrs['electric_uniform_field_{}'.format(c)] = s.uniform_field_vector[i]
+                    sg.attrs[f'electric_uniform_field_{c}'] = s.uniform_field_vector[i]
             elif s.__class__ is FieldExpression:
                 ft = 'electric_tinyexpr'
                 for i, c in enumerate('xyz'):
-                    expr = getattr(s, 'expression_{}'.format(c))
+                    expr = getattr(s, f'expression_{c}')
                     expr = np.string_(expr.encode('utf8')) + b'\x00'
-                    sg.attrs['electric_tinyexpr_field_{}'.format(c)] = expr
+                    sg.attrs[f'electric_tinyexpr_field_{c}'] = expr
             elif s.__class__ is FieldOnGrid:
                 ft = 'electric_on_regular_grid'
                 sg.attrs['h5filename'] = np.string_(s.field_filename.encode('utf8') + b'\x00')
@@ -72,14 +73,14 @@ class OutputWriterCpp(OutputWriterNumberedH5):
                 ft = 'magnetic_uniform'
                 sg.attrs['speed_of_light'] = speed_of_light
                 for i, c in enumerate('xyz'):
-                    sg.attrs['magnetic_uniform_field_{}'.format(c)] = s.uniform_field_vector[i]
+                    sg.attrs[f'magnetic_uniform_field_{c}'] = s.uniform_field_vector[i]
             elif s.__class__ is FieldExpression:
                 ft = 'magnetic_tinyexpr'
                 sg.attrs['speed_of_light'] = speed_of_light
                 for i, c in enumerate('xyz'):
-                    expr = getattr(s, 'expression_{}'.format(c))
+                    expr = getattr(s, f'expression_{c}')
                     expr = np.string_(expr.encode('utf8')) + b'\x00'
-                    sg.attrs['magnetic_tinyexpr_field_{}'.format(c)] = expr
+                    sg.attrs[f'magnetic_tinyexpr_field_{c}'] = expr
             sg.attrs['field_type'] = np.string_(ft.encode('utf8') + b'\x00')
 
         g = h5file.create_group('ParticleInteractionModel')

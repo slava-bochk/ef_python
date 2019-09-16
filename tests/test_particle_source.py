@@ -55,15 +55,6 @@ class TestParticleSource:
         assert_almost_ae(p.momentums.mean(axis=0), (3, -2, 0), 2)
         assert_almost_ae(((p.momentums - p.xp.array([3, -2, 0])).std(axis=0)), np.full(3, sqrt(3)), 2)
 
-    def test_write_h5(self):
-        f = BytesIO()
-        p1 = ParticleSource()
-        with h5py.File(f, mode="w") as h5file:
-            p1.save_h5(h5file)
-        with h5py.File(f, mode="r") as h5file:
-            p2 = ParticleSource.load_h5(h5file)
-        p1.assert_eq(p2)
-
     def test_export_h5(self):
         f = BytesIO()
         p1 = ParticleSource()
