@@ -1,5 +1,6 @@
 from math import sqrt
 
+import inject
 import numpy as np
 from pytest import raises
 
@@ -76,13 +77,14 @@ class TestFields:
         assert_array_equal(f.get_at_points([(3, 2, 1)], 5.), [(4, 5, 5)])
         assert_array_equal(f.get_at_points([(1, 2, 3), (3, 2, 1)], 5.), [(4, -1, 7), (4, 5, 5)])
 
-    def test_on_grid(self):
-        f = FieldOnGrid('f1', 'electric', ArrayOnGrid(MeshGrid(5, 6), 3, np.full((6, 6, 6, 3), -3.14)))
-        assert_array_equal(f.get_at_points([(-1, 0, 0), (1, 2, 3.5)], 1), [(0, 0, 0), (-3.14, -3.14, -3.14)])
+    def test_on_grid(self, backend):
+        f = FieldOnGrid('f1', 'electric',
+                        inject.instance(ArrayOnGrid)(MeshGrid(5, 6), 3, inject.instance(np).full((6, 6, 6, 3), -3.14)))
+        assert_array_almost_equal(f.get_at_points([(-1, 0, 0), (1, 2, 3.5)], 1), [(0, 0, 0), (-3.14, -3.14, -3.14)])
         with raises(ValueError):
-            FieldOnGrid('f1', 'electric', ArrayOnGrid(MeshGrid(5, 6)))
+            FieldOnGrid('f1', 'electric', inject.instance(ArrayOnGrid)(MeshGrid(5, 6)))
 
-    def test_from_file(self):
+    def test_from_file(self, backend):
         f = FieldFromCSVFile('f1', 'electric', 'tests/test_field.csv')
         assert_array_equal(f.get_at_points([(0, 0, 0), (1, 1, 1), (1, 0, 1), (.5, .5, .5)], 0),
                            [(1, 1, 1), (-1, -1, -1), (3, 2, 1), (1, 1, 1)])

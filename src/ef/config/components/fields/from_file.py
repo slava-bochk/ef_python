@@ -1,4 +1,4 @@
-from ef.field import on_grid
+from ef.field import from_csv
 
 __all__ = ["ExternalFieldFromFileConf", "ExternalFieldFromFileSection"]
 
@@ -20,7 +20,7 @@ class ExternalFieldFromFileConf(FieldConf):
         return ExternalFieldFromFileSection(self.name, self.electric_or_magnetic, self.filename)
 
     def make(self):
-        return on_grid.FieldOnGrid(self.name, self.electric_or_magnetic, self.filename)
+        return from_csv.FieldFromCSVFile(self.name, self.electric_or_magnetic, self.filename)
 
 
 class ExternalFieldFromFileSection(NamedConfigSection):
@@ -30,4 +30,4 @@ class ExternalFieldFromFileSection(NamedConfigSection):
     convert = ContentTuple(str, str)
 
     def make(self):
-        return ExternalFieldFromFileConf(self.name, self.content)
+        return ExternalFieldFromFileConf(self.name, *self.content)

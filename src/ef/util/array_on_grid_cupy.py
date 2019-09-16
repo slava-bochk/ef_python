@@ -33,7 +33,9 @@ class ArrayOnGridCupy(ArrayOnGrid):
                     (x0>={n[0]}-1 & dx>0) | 
                     (y0>={n[1]}-1 & dy>0) | 
                     (z0>={n[2]}-1 & dz>0) ) {{
-                    result[tid] = 0;
+                        for (int q=0; q<{v}; q++) {{
+                            result[tid * {v} + q] = 0;
+                        }}
                 }} else {{
                     int where = ((x0*{n[1]} + y0)*{n[2]} + z0) * {v};
                     for (int q=0; q<{v}; q++) {{
