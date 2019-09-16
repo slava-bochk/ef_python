@@ -1,6 +1,7 @@
 import os.path
 
-import numpy as np
+import inject
+import numpy
 
 from ef.field.on_grid import FieldOnGrid
 from ef.meshgrid import MeshGrid
@@ -8,10 +9,11 @@ from ef.util.array_on_grid import ArrayOnGrid
 
 
 class FieldFromCSVFile(FieldOnGrid):
-    def __init__(self, name, electric_or_magnetic, field_filename):
+    @inject.params(xp=numpy, array_class=ArrayOnGrid)
+    def __init__(self, name, electric_or_magnetic, field_filename, xp=numpy, array_class=ArrayOnGrid):
         if not os.path.exists(field_filename):
             raise FileNotFoundError("Field file not found")
-        raw = np.loadtxt(field_filename)
+        raw = numpy.loadtxt(field_filename, skiprows=1)
         # assume X Y Z Fx Fy Fz columns
         # sort by column 0, then 1, then 2
         # https://stackoverflow.com/a/38194077
@@ -24,8 +26,8 @@ class FieldFromCSVFile(FieldOnGrid):
         size = (raw[-1, :3] - raw[0, :3])
         origin = raw[0, :3]
         dist = raw[:, :3] - raw[0, :3]
-        step = np.min(dist[dist > 0], axis=0)
+        step = dist.min(axis=0, where=dist > 0, initial=dist.max())
         grid = MeshGrid.from_step(size, step, origin)
-        field = raw[:, 3:].reshape((*grid.n_nodes, 3))
-        super().__init__(name, electric_or_magnetic, ArrayOnGrid(grid, 3, field))
+        field = xp.asarray(raw[:, 3:].reshape((*grid.n_nodes, 3)))
+        super().__init__(name, electric_or_magnetic, array_class(grid, 3, field))
         self.field_filename = field_filename

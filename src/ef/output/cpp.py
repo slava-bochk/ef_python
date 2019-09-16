@@ -2,6 +2,7 @@ import numpy as np
 from h5py import File
 
 from ef.field.expression import FieldExpression
+from ef.field.from_csv import FieldFromCSVFile
 from ef.field.on_grid import FieldOnGrid
 from ef.field.uniform import FieldUniform
 from ef.output import OutputWriterNumberedH5
@@ -55,7 +56,7 @@ class OutputWriterCpp(OutputWriterNumberedH5):
                     expr = getattr(s, f'expression_{c}')
                     expr = np.string_(expr.encode('utf8')) + b'\x00'
                     sg.attrs[f'electric_tinyexpr_field_{c}'] = expr
-            elif s.__class__ is FieldOnGrid:
+            elif s.__class__ is FieldFromCSVFile:
                 ft = 'electric_on_regular_grid'
                 sg.attrs['h5filename'] = np.string_(s.field_filename.encode('utf8') + b'\x00')
             sg.attrs['field_type'] = np.string_(ft.encode('utf8') + b'\x00')
