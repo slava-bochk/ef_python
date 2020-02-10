@@ -37,6 +37,8 @@ class Field(SerializableH5):
         elif ft == b'magnetic_tinyexpr':
             return FieldExpression(name, 'magnetic',
                                    *[ga['magnetic_tinyexpr_field_{}'.format(c)].decode('utf8') for c in 'xyz'])
+        elif ft == b'magnetic_on_regular_grid':
+            return FieldOnGrid(name, 'magnetic', ga['magnetic_h5filename'].decode('utf8'))
 
 
 class FieldZero(Field):

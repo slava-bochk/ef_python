@@ -82,6 +82,9 @@ class OutputWriterCpp(OutputWriterNumberedH5):
                     expr = getattr(s, f'expression_{c}')
                     expr = np.string_(expr.encode('utf8')) + b'\x00'
                     sg.attrs[f'magnetic_tinyexpr_field_{c}'] = expr
+            elif s.__class__ is FieldFromCSVFile:
+                ft = 'magnetic_on_regular_grid'
+                sg.attrs['h5filename'] = np.string_(s.field_filename.encode('utf8') + b'\x00')
             sg.attrs['field_type'] = np.string_(ft.encode('utf8') + b'\x00')
 
         g = h5file.create_group('ParticleInteractionModel')
