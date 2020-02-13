@@ -7,10 +7,12 @@ import inject
 import pytest
 from pytest import raises
 
-from ef.config.components import TimeGridConf, OutputFileConf
+from ef.config.components import TimeGridConf, OutputFileConf, SpatialMeshConf, InnerRegionConf, Tube
 from ef.config.config import Config
 from ef.main import main, extract_prefix_and_suffix_from_h5_filename, guess_input_type, read_conf, \
     merge_h5_prefix_suffix
+from ef.runner import Runner
+from ef.util.inject import configure_application
 from ef.util.testing import assert_dataclass_eq
 
 
@@ -133,3 +135,22 @@ Using output prefix and suffix: out_ .h5
 Writing step 10 to file
 Writing to file out_0000010.h5
 """
+
+
+@pytest.mark.parametrize('solver_', ['amg', pytest.param('amgx', marks=pytest.mark.amgx)])
+@pytest.mark.parametrize('backend_', ['numpy', pytest.param('cupy', marks=pytest.mark.cupy)])
+def test_large_grid(solver_, backend_):
+    try:
+        configure_application(solver_, backend_)
+        c = Config(TimeGridConf(1, 1, 1), SpatialMeshConf(100, 1),
+                   inner_regions=[InnerRegionConf('tube',
+                                                  Tube((50, 50, 10), (50, 50, 12), 10, 90),
+                                                  10)])
+        r = Runner(c.make())
+        r.eval_and_write_fields_without_particles()
+        assert r.simulation.potential.data.mean() >= 0
+        assert r.simulation.potential.data.mean() <= 10
+        assert abs(r.simulation.potential.data.max() - 10) < 0.01
+        assert abs(r.simulation.potential.data.min()) < 0.01
+    finally:
+        inject.clear()
