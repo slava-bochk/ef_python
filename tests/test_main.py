@@ -137,6 +137,7 @@ Writing to file out_0000010.h5
 """
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize('solver_', ['amg', pytest.param('amgx', marks=pytest.mark.amgx)])
 @pytest.mark.parametrize('backend_', ['numpy', pytest.param('cupy', marks=pytest.mark.cupy)])
 def test_large_grid(solver_, backend_):
