@@ -82,7 +82,7 @@ class FieldSolver:
         data = matrix.data
         row = matrix.row
         col = matrix.col
-        mask = np.any(row[np.newaxis, :] == self.nodes_in_regions[:, np.newaxis], axis=0)
+        mask = np.isin(row, self.nodes_in_regions)
         data[mask] = 0.
         data[np.logical_and(row == col, mask)] = 1.
         return scipy.sparse.coo_matrix((data, (row, col)), shape=matrix.shape)
