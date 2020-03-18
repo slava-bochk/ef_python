@@ -1,15 +1,16 @@
 import os
 import subprocess
-from os.path import basename
-from shutil import copytree, copy
+from shutil import copytree
 
 import inject
 import pytest
 
 from ef.config.config import Config
-from ef.main import main
+from ef.runner import Runner
+from ef.util.testing import assert_dataclass_eq
 
-_examples_conf = [("examples/minimal_working_example/minimal_conf.conf", ()),
+_examples_conf = [("examples/axially_symmetric_beam_contour/contour.conf", pytest.mark.slow),
+                  ("examples/minimal_working_example/minimal_conf.conf", ()),
                   ("examples/single_particle_in_free_space/single_particle_in_free_space.conf", pytest.mark.slowish),
                   ("examples/single_particle_in_radial_electric_field/single_particle_in_radial_electric_field.conf",
                    ()),
@@ -27,14 +28,10 @@ _pytest_params_example_conf = [pytest.param(f.replace('/', os.path.sep), marks=m
 
 
 @pytest.mark.parametrize("fname", _pytest_params_example_conf)
-def test_example_conf(fname, mocker, capsys, tmpdir, monkeypatch):
-    copy(fname, tmpdir.join(basename(fname)))
+def test_example_conf(fname, tmpdir, monkeypatch, backend_and_solver):
+    sim = Config.from_fname(fname).make()
     monkeypatch.chdir(tmpdir)
-    mocker.patch("sys.argv", ["main.py", str(basename(fname))])
-    main()
-    out, err = capsys.readouterr()
-    assert err == ""
-    inject.clear()
+    Runner(sim).start()
 
 
 def run_jupyter(dir, fname, path=None, copy_dir=False):
@@ -86,8 +83,8 @@ def test_tube_source(tmpdir):
 def test_single_particle_in_free_space(tmpdir):
     run_jupyter("examples/single_particle_in_free_space", "single_particle_in_free_space.ipynb",
                 tmpdir.join('newdir'), True)
-    assert Config.from_fname(tmpdir.join('newdir').join('config.ini')) == \
-           Config.from_fname(tmpdir.join('newdir').join('single_particle_in_free_space.conf'))
+    assert_dataclass_eq(Config.from_fname(tmpdir.join('newdir').join('config.ini')),
+                        Config.from_fname(tmpdir.join('newdir').join('single_particle_in_free_space.conf')))
 
 
 @pytest.mark.slowish

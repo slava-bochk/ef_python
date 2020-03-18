@@ -2,7 +2,6 @@ import operator
 from functools import reduce
 
 import numpy
-from scipy.interpolate import RegularGridInterpolator
 
 from ef.util.array_on_grid import ArrayOnGrid
 
@@ -34,7 +33,9 @@ class ArrayOnGridCupy(ArrayOnGrid):
                     (x0>={n[0]}-1 & dx>0) | 
                     (y0>={n[1]}-1 & dy>0) | 
                     (z0>={n[2]}-1 & dz>0) ) {{
-                    result[tid] = 0;
+                        for (int q=0; q<{v}; q++) {{
+                            result[tid * {v} + q] = 0;
+                        }}
                 }} else {{
                     int where = ((x0*{n[1]} + y0)*{n[2]} + z0) * {v};
                     for (int q=0; q<{v}; q++) {{
@@ -85,6 +86,7 @@ class ArrayOnGridCupy(ArrayOnGrid):
         cupyx.scatter_add(a, slices, value)
 
     def interpolate_at_positions(self, positions):
+        positions = self.xp.asanyarray(positions)
         result = self.xp.empty(reduce(operator.mul, self.value_shape, positions.shape[0]))
         n = positions.shape[0]
         block = 128
@@ -92,22 +94,3 @@ class ArrayOnGridCupy(ArrayOnGrid):
         self._interpolate_field((grid,), (block,), (n, self._data.ravel(order='C'), positions.ravel(order='C'), result))
         result = result.reshape((positions.shape[0], *self.value_shape))
         return result
-
-    def gradient(self):
-        # based on numpy.gradient simplified for our case
-        if self.value_shape != ():
-            raise ValueError("Trying got compute gradient for a non-scalar field: ambiguous")
-        if any(n < 2 for n in self.n_nodes):
-            raise ValueError("ArrayOnGrid too small to compute gradient")
-        f = self._data
-        result = self.xp.empty((3, *self.n_nodes))
-
-        internal = slice(1, -1)
-        to_left = slice(None, -2)
-        to_right = slice(2, None)
-        for axis, dx in enumerate(self.cell):
-            on_axis = lambda s: tuple(s if i == axis else slice(None) for i in range(3))
-            result[axis][on_axis(internal)] = -(f[on_axis(to_right)] - f[on_axis(to_left)]) / (2. * dx)
-            result[axis][on_axis(0)] = -(f[on_axis(1)] - f[on_axis(0)]) / dx
-            result[axis][on_axis(-1)] = -(f[on_axis(-1)] - f[on_axis(-2)]) / dx
-        return self.__class__(self.grid, 3, self.xp.moveaxis(result, 0, -1))

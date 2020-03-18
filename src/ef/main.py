@@ -7,33 +7,12 @@ from argparse import ArgumentTypeError
 from configparser import ConfigParser
 
 import h5py
-import inject
-import numpy
-from inject import Binder, BinderCallable
 
 from ef.config.components import OutputFileConf
 from ef.config.config import Config
-from ef.field.solvers import FieldSolver
-from ef.field.solvers.pyamg import FieldSolverPyamg
-from ef.field.solvers.pyamgx import FieldSolverPyamgx
 from ef.output.reader import Reader
 from ef.runner import Runner
-from ef.util.array_on_grid import ArrayOnGrid
-from ef.util.array_on_grid_cupy import ArrayOnGridCupy
-
-
-def make_injection_config(solver: str, backend: str) -> BinderCallable:
-    def conf(binder: Binder) -> None:
-        binder.bind(FieldSolver, FieldSolverPyamgx if solver == 'amgx' else FieldSolverPyamg)
-        if backend == 'cupy':
-            import cupy
-            binder.bind(ArrayOnGrid, ArrayOnGridCupy)
-            binder.bind(numpy, cupy)
-        else:
-            binder.bind(ArrayOnGrid, ArrayOnGrid)
-            binder.bind(numpy, numpy)
-
-    return conf
+from ef.util.inject import configure_application
 
 
 def main():
@@ -51,7 +30,7 @@ def main():
     args = parser.parse_args()
 
     is_config, parser_or_h5_filename = args.config_or_h5_file
-    inject.clear_and_configure(make_injection_config(args.solver, args.backend))
+    configure_application(args.solver, args.backend)
     if is_config:
         conf = read_conf(parser_or_h5_filename, args.prefix, args.suffix, args.output_format)
         sim = conf.make()
@@ -65,7 +44,6 @@ def main():
             sim = Reader.read_simulation(h5file)
         writer = OutputFileConf(prefix, suffix, args.output_format).make()
         Runner(sim, output_writer=writer).continue_()
-    inject.clear()
     del sim
     return 0
 

@@ -1,23 +1,23 @@
+from typing import Optional
+
 import h5py
 import numpy as np
 
 from ef.output import OutputWriter
 from ef.particle_interaction_model import Model
+from ef.util.serializable_h5 import tree_to_hdf5
 
 
 class OutputWriterHistory(OutputWriter):
-    def __init__(self, prefix, suffix):
-        self.prefix = prefix
-        self.suffix = suffix
-        self.h5file = h5py.File(self.format_filename('history'), 'w')
+    def __init__(self, prefix: str, suffix: str):
+        self.prefix: str = prefix
+        self.suffix: str = suffix
+        self.h5file: h5py.File = h5py.File(f"{prefix}history{suffix}", 'w')
 
     def __del__(self):
         self.h5file.close()
 
-    def format_filename(self, specific_name):
-        return "{prefix}{name}{suffix}".format(prefix=self.prefix, suffix=self.suffix, name=specific_name)
-
-    def write(self, sim, name=None):
+    def write(self, sim: 'Simulation', name: Optional[str] = None) -> None:
         if name is not None:
             return  # don't write fields_without_particles etc.
         if self.h5file.get('history') is None:
@@ -25,15 +25,15 @@ class OutputWriterHistory(OutputWriter):
         t = sim.time_grid.current_node // sim.time_grid.node_to_save
         h = self.h5file['history']
         for p in sim.particle_arrays:
-            for i, id in enumerate(p.ids):
-                h['/particles/position'][id, t] = p.positions[i]
-                h['/particles/momentum'][id, t] = p.momentums[i]
-                h['/particles/mass'][id] = p.mass
-                h['/particles/charge'][id] = p.charge
+            for i, id_ in enumerate(p.ids):
+                h['particles/position'][id_, t] = p.positions[i]
+                h['particles/momentum'][id_, t] = p.momentums[i]
+                h['particles/mass'][id_] = p.mass
+                h['particles/charge'][id_] = p.charge
         if sim.particle_interaction_model == Model.PIC:
-            h['/field/potential'][t] = sim.spat_mesh.potential
+            h['field/potential'][t] = sim.potential
 
-    def init_file(self, sim, h5file):
+    def init_file(self, sim: 'Simulation', h5file: h5py.File) -> None:
         h = h5file.create_group('history')
         n_particles = sum(s.initial_number_of_particles +
                           s.particles_to_generate_each_step * sim.time_grid.total_nodes
@@ -71,13 +71,13 @@ class OutputWriterHistory(OutputWriter):
         h['particles/charge'].dims.create_scale(h['particles/ids'], 'ids')
         h['particles/charge'].dims[0].attach_scale(h['particles/ids'])
         if sim.particle_interaction_model == Model.PIC:
-            h.create_dataset('field/potential', (n_time, *sim.spat_mesh.n_nodes))
+            h.create_dataset('field/potential', (n_time, *sim.potential.n_nodes))
             h['field/potential'].dims[0].label = 'time'
             h['field/potential'].dims.create_scale(h['time'], 'time')
             h['field/potential'].dims[0].attach_scale(h['time'])
             for i, c in enumerate('xyz'):
-                h['field/{}'.format(c)] = np.linspace(0, sim.spat_mesh.size[i], sim.spat_mesh.n_nodes[i])
+                h[f'field/{c}'] = np.linspace(0, sim.electric_field.size[i], sim.electric_field.n_nodes[i])
                 h['field/potential'].dims[i + 1].label = c
-                h['field/potential'].dims.create_scale(h['field/{}'.format(c)], c)
-                h['field/potential'].dims[i + 1].attach_scale(h['field/{}'.format(c)])
-        sim.save_h5(self.h5file.create_group('simulation'))
+                h['field/potential'].dims.create_scale(h[f'field/{c}'], c)
+                h['field/potential'].dims[i + 1].attach_scale(h[f'field/{c}'])
+        tree_to_hdf5(sim.tree, self.h5file.create_group('simulation'))

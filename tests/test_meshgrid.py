@@ -1,13 +1,13 @@
 import logging
 
-import h5py
 import numpy as np
 from numpy.testing import assert_array_equal
 from pytest import raises
 
-from ef.config.components import SpatialMeshConf, BoundaryConditionsConf
+from ef.config.components import BoundaryConditionsConf
 from ef.meshgrid import MeshGrid
 from ef.util.array_on_grid import ArrayOnGrid
+from ef.util.testing import assert_dataclass_eq
 
 
 class TestMeshGrid:
@@ -18,9 +18,9 @@ class TestMeshGrid:
         assert_array_equal(m.origin, (0, 0, 0))
 
     def test_from_step(self):
-        assert MeshGrid.from_step(10, 1, 7) == MeshGrid(10, 11, 7)
-        assert MeshGrid.from_step([10, 20, 5], [1, 4, 1]) == MeshGrid([10, 20, 5], [11, 6, 6])
-        assert MeshGrid.from_step(10, [1, 2, 4]) == MeshGrid(10, [11, 6, 4])
+        assert_dataclass_eq(MeshGrid.from_step(10, 1, 7), MeshGrid(10, 11, 7))
+        assert_dataclass_eq(MeshGrid.from_step([10, 20, 5], [1, 4, 1]), MeshGrid([10, 20, 5], [11, 6, 6]))
+        assert_dataclass_eq(MeshGrid.from_step(10, [1, 2, 4]), MeshGrid(10, [11, 6, 4]))
 
     def test_cell(self):
         assert_array_equal(MeshGrid(10, 11, 7).cell, (1, 1, 1))
@@ -36,13 +36,6 @@ class TestMeshGrid:
         assert_array_equal(MeshGrid.from_step((4, 2, 3), (2, 1, 3)).node_coordinates, coords)
         assert_array_equal(MeshGrid.from_step((4, 2, 3), (2, 1, 3), (1, 2, 3.14)).node_coordinates,
                            coords + [1, 2, 3.14])
-
-    def test_config(self, capsys, backend):
-        mesh, charge, potential, field = SpatialMeshConf((4, 2, 3), (2, 1, 3)).make()
-        assert mesh == MeshGrid((4, 2, 3), (3, 3, 2))
-        out, err = capsys.readouterr()
-        assert out == ""
-        assert err == ""
 
     def test_do_init_warnings(self, capsys, caplog):
         MeshGrid.from_step((12, 12, 12), (5, 5, 7))
@@ -74,20 +67,10 @@ class TestMeshGrid:
             MeshGrid.from_step(((1, 2), 3), (1, 1, 1))
         with raises(ValueError):
             MeshGrid.from_step((10, 10, 10), [[2, 1, 3], [4, 5, 6], [7, 8, 9]],
-                                BoundaryConditionsConf(3.14))
+                               BoundaryConditionsConf(3.14))
         with raises(ValueError):
             MeshGrid.from_step((10, 10, -30), (2, 1, 3))
         with raises(ValueError):
             MeshGrid.from_step((10, 10, 10), (2, -2, 3))
         mesh = MeshGrid.from_step((10, 10, 10), (17, 2, 3))
         assert tuple(mesh.cell) == (10, 2, 2.5)
-
-    def test_init_h5(self, tmpdir):
-        fname = tmpdir.join('test_spatialmesh_init.h5')
-
-        mesh1 = MeshGrid.from_step((10, 20, 30), (2, 1, 3))
-        with h5py.File(fname, mode="w") as h5file:
-            mesh1.save_h5(h5file.create_group("/meshgroup"))
-        with h5py.File(fname, mode="r") as h5file:
-            mesh2 = MeshGrid.load_h5(h5file["/meshgroup"])
-        assert mesh1 == mesh2

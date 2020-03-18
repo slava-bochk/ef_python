@@ -11,6 +11,7 @@ from ef.config.components import TimeGridConf, OutputFileConf
 from ef.config.config import Config
 from ef.main import main, extract_prefix_and_suffix_from_h5_filename, guess_input_type, read_conf, \
     merge_h5_prefix_suffix
+from ef.util.testing import assert_dataclass_eq
 
 
 def test_prefix_extraction():
@@ -60,10 +61,13 @@ def test_read_conf():
     p = ConfigParser()
     c = Config(output_file=OutputFileConf("conf-prefix", "conf-suffix"))
     p.read_string(c.export_to_string())
-    assert read_conf(p, None, None, 'cpp') == c
-    assert read_conf(p, 'prefix2', None, 'cpp') == Config(output_file=OutputFileConf("prefix2", "conf-suffix"))
-    assert read_conf(p, 'prefix3', 'suffix3', 'cpp') == Config(output_file=OutputFileConf("prefix3", "suffix3"))
-    assert read_conf(p, None, 'suffix4', 'cpp') == Config(output_file=OutputFileConf("conf-prefix", "suffix4"))
+    assert_dataclass_eq(read_conf(p, None, None, 'cpp'), c)
+    assert_dataclass_eq(read_conf(p, 'prefix2', None, 'cpp'),
+                        Config(output_file=OutputFileConf("prefix2", "conf-suffix")))
+    assert_dataclass_eq(read_conf(p, 'prefix3', 'suffix3', 'cpp'),
+                        Config(output_file=OutputFileConf("prefix3", "suffix3")))
+    assert_dataclass_eq(read_conf(p, None, 'suffix4', 'cpp'),
+                        Config(output_file=OutputFileConf("conf-prefix", "suffix4")))
 
 
 def test_guess_stdin(tmpdir, monkeypatch):
@@ -87,6 +91,7 @@ def test_main(mocker, capsys, tmpdir, monkeypatch, solver_, backend_):
         argv += ["--backend", backend_]
     mocker.patch("sys.argv", argv)
     main()
+    inject.clear()
     out, err = capsys.readouterr()
     assert err == ""
     assert out == f"""Trying to guess input file type: {config}
@@ -118,6 +123,7 @@ Writing to file out_0000010.h5
         argv += ["--backend", backend_]
     mocker.patch("sys.argv", argv)
     main()
+    inject.clear()
     out, err = capsys.readouterr()
     assert err == ""
     assert out == f"""Trying to guess input file type: out_0000005.h5
@@ -127,4 +133,3 @@ Using output prefix and suffix: out_ .h5
 Writing step 10 to file
 Writing to file out_0000010.h5
 """
-    assert not inject.is_configured()

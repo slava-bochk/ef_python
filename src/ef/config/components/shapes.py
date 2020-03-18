@@ -4,6 +4,7 @@ import rowan
 from numpy.linalg import norm
 
 from ef.config.component import ConfigComponent
+from ef.util.inject import safe_default_inject
 from ef.util.serializable_h5 import SerializableH5
 from ef.util.vector import vector
 
@@ -11,6 +12,7 @@ __all__ = ['Shape', 'Box', 'Cylinder', 'Tube', 'Sphere', 'Cone']
 
 
 class Shape(ConfigComponent, SerializableH5):
+    @safe_default_inject
     @inject.params(xp=np)
     def __init__(self, xp=np):
         self.xp = xp

@@ -1,17 +1,19 @@
 from collections import defaultdict
-from typing import List
+from typing import List, Optional, Sequence, Type
 
-import numpy as np
+import inject
 
-from ef.config.components import Box
-from ef.field import FieldZero, FieldSum
+import ef.config.components.shapes as shapes
+from ef.field import FieldZero, FieldSum, Field
 from ef.field.on_grid import FieldOnGrid
 from ef.field.particles import FieldParticles
 from ef.inner_region import InnerRegion
 from ef.meshgrid import MeshGrid
 from ef.particle_array import ParticleArray
 from ef.particle_interaction_model import Model
+from ef.particle_source import ParticleSource
 from ef.particle_tracker import ParticleTracker
+from ef.time_grid import TimeGrid
 from ef.util.array_on_grid import ArrayOnGrid
 from ef.util.serializable_h5 import SerializableH5
 
@@ -23,32 +25,42 @@ def is_trivial(potential: ArrayOnGrid, inner_regions: List[InnerRegion]):
 
 
 class Simulation(SerializableH5):
-    def __init__(self, time_grid,
-                 mesh: MeshGrid, charge_density: ArrayOnGrid, potential: ArrayOnGrid, electric_field: FieldOnGrid,
-                 inner_regions: List[InnerRegion],
-                 particle_sources,
-                 electric_fields, magnetic_fields, particle_interaction_model,
-                 particle_tracker=None, particle_arrays=()):
-        self.time_grid = time_grid
-        self.mesh = mesh
-        self.charge_density = charge_density
-        self.potential = potential
-        self.electric_field = electric_field
-        self._domain = InnerRegion('simulation_domain', Box(0, mesh.size), inverted=True)
-        self.inner_regions = inner_regions
-        self.particle_sources = particle_sources
-        self.electric_fields = FieldSum.factory(electric_fields, 'electric')
-        self.magnetic_fields = FieldSum.factory(magnetic_fields, 'magnetic')
-        self.particle_interaction_model = particle_interaction_model
-        self.particle_arrays = list(particle_arrays)
+    array_class: Type[ArrayOnGrid] = inject.attr(ArrayOnGrid)
+
+    def __init__(self, time_grid: TimeGrid,
+                 mesh: MeshGrid,
+                 inner_regions: Sequence[InnerRegion] = (),
+                 particle_sources: Sequence[ParticleSource] = (),
+                 electric_fields: Sequence[Field] = (),
+                 magnetic_fields: Sequence[Field] = (),
+                 particle_interaction_model: Model = Model.PIC,
+                 charge_density: Optional[ArrayOnGrid] = None,
+                 potential: Optional[ArrayOnGrid] = None,
+                 electric_field: Optional[FieldOnGrid] = None,
+                 particle_tracker: Optional[ParticleTracker] = None,
+                 particle_arrays: Sequence[ParticleArray] = ()):
+        super().__init__()
+        self.time_grid: TimeGrid = time_grid
+        self.mesh: MeshGrid = mesh
+        self.charge_density: ArrayOnGrid = self.array_class(mesh) if charge_density is None else charge_density
+        self.potential: ArrayOnGrid = self.array_class(mesh) if potential is None else potential
+        self.electric_field: FieldOnGrid = FieldOnGrid('spatial_mesh', 'electric', self.array_class(mesh, 3)) \
+            if electric_field is None else electric_field
+        self._domain = InnerRegion('simulation_domain', shapes.Box(0, mesh.size), inverted=True)
+        self.inner_regions: List[InnerRegion] = list(inner_regions)
+        self.particle_sources: List[ParticleSource] = list(particle_sources)
+        self.electric_fields: Field = FieldSum.factory(electric_fields, 'electric')
+        self.magnetic_fields: Field = FieldSum.factory(magnetic_fields, 'magnetic')
+        self.particle_interaction_model: Model = particle_interaction_model
+        self.particle_arrays: List[ParticleArray] = list(particle_arrays)
         self.consolidate_particle_arrays()
 
         if self.particle_interaction_model == Model.binary:
             self._dynamic_field = FieldParticles('binary_particle_field', self.particle_arrays)
-            if not is_trivial(potential, inner_regions):
+            if not is_trivial(self.potential, self.inner_regions):
                 self._dynamic_field += self.electric_field
         elif self.particle_interaction_model == Model.noninteracting:
-            if not is_trivial(potential, inner_regions):
+            if not is_trivial(self.potential, self.inner_regions):
                 self._dynamic_field = self.electric_field
             else:
                 self._dynamic_field = FieldZero('Uniform_potential_zero_field', 'electric')
@@ -56,6 +68,12 @@ class Simulation(SerializableH5):
             self._dynamic_field = self.electric_field
 
         self.particle_tracker = ParticleTracker() if particle_tracker is None else particle_tracker
+
+    @property
+    def dict(self) -> dict:
+        d = super().dict
+        d['particle_interaction_model'] = d['particle_interaction_model'].name
+        return d
 
     def advance_one_time_step(self, field_solver):
         self.push_particles()
@@ -75,7 +93,7 @@ class Simulation(SerializableH5):
         if self.particle_interaction_model == Model.PIC:
             self.eval_charge_density()
             field_solver.eval_potential(self.charge_density, self.potential)
-            self.electric_field.array = self.potential.gradient()
+            self.potential.gradient(self.electric_field.array)
         self.shift_new_particles_velocities_half_time_step_back()
         self.consolidate_particle_arrays()
 

@@ -14,25 +14,24 @@ class FieldSolverPyamgx(FieldSolver):
         self.cfg.destroy()
         pyamgx.finalize()
 
-    def create_solver_and_preconditioner(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         import pyamgx
-        self.maxiter = 1000
-        self.tol = 1e-10
         pyamgx.initialize()
         self.cfg = pyamgx.Config()
-        # "print_solve_stats": 1
-        # "obtain_timings": 1,
-        # "print_grid_stats": 1,
-        conf_string = """{{
+        conf_string = f"""{{
             "config_version": 2,
             "solver": {{
-                "solver": "CG",
-                "max_iters": {maxiter},
+                "solver": "BICGSTAB",
+                "max_iters": {self.max_iter},
                 "monitor_residual": 1,
-                "tolerance": {tol},
-                "norm": "L2"
+                "tolerance": {self.tolerance},
+                "norm": "L2",
+                "print_solve_stats": 0,
+                "obtain_timings": 0,
+                "print_grid_stats": 0
             }}
-        }}""".format(tol=self.tol, maxiter=self.maxiter)
+        }}"""
         self.cfg.create(conf_string)
         self.resources = pyamgx.Resources().create_simple(self.cfg)
         self._rhs = pyamgx.Vector().create(self.resources)
@@ -41,7 +40,7 @@ class FieldSolverPyamgx(FieldSolver):
         self._solver = pyamgx.Solver().create(self.resources, self.cfg)
         self._solver.setup(self._matrix)
 
-    def solve_poisson_eqn(self, charge_density, potential):
+    def eval_potential(self, charge_density, potential):
         self.init_rhs_vector(charge_density, potential)
         if hasattr(self.rhs.data, 'ptr'):
             self._rhs.upload_raw(self.rhs.data.ptr, len(self.rhs))

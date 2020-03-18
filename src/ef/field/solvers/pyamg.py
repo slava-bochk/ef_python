@@ -2,13 +2,12 @@ from ef.field.solvers import FieldSolver
 
 
 class FieldSolverPyamg(FieldSolver):
-    def create_solver_and_preconditioner(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         import pyamg
-        self.maxiter = 1000
-        self.tol = 1e-10
         self._solver = pyamg.ruge_stuben_solver(self.A)
 
-    def solve_poisson_eqn(self, charge_density, potential):
+    def eval_potential(self, charge_density, potential):
         self.init_rhs_vector(charge_density, potential)
-        self.phi_vec = self._solver.solve(self.rhs, x0=self.phi_vec, tol=self.tol, maxiter=self.maxiter)
+        self.phi_vec = self._solver.solve(self.rhs, x0=self.phi_vec, tol=self.tolerance, maxiter=self.max_iter)
         self.transfer_solution_to_spat_mesh(potential)

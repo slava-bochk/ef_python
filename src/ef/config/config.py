@@ -1,10 +1,15 @@
 import io
 from configparser import ConfigParser
+from typing import Type
+
+import inject
 
 from ef import simulation
 from ef.config.components import *
 from ef.config.section import ConfigSection
+from ef.util.array_on_grid import ArrayOnGrid
 from ef.util.data_class import DataClass
+from ef.util.inject import safe_default_inject
 
 
 class Config(DataClass):
@@ -100,9 +105,12 @@ class Config(DataClass):
         self.export_to_file(iostr)
         return iostr.getvalue()
 
-    def make(self):
+    @safe_default_inject
+    @inject.params(array_class=ArrayOnGrid)
+    def make(self, array_class: Type[ArrayOnGrid]):
         grid = self.time_grid.make()
-        mesh, charge, potential, electric_field = self.spatial_mesh.make()
+        mesh = self.spatial_mesh.make()
+        potential = array_class(mesh)
         potential.apply_boundary_values(self.boundary_conditions)
         regions = [ir.make() for ir in self.inner_regions]
         sources = [s.make() for s in self.sources]
@@ -110,8 +118,8 @@ class Config(DataClass):
         electric_fields = [f for f in fields if f.electric_or_magnetic == 'electric']
         magnetic_fields = [f for f in fields if f.electric_or_magnetic == 'magnetic']
         model = self.particle_interaction_model.make()
-        return simulation.Simulation(grid, mesh, charge, potential, electric_field,
-                                     regions, sources, electric_fields, magnetic_fields, model)
+        return simulation.Simulation(grid, mesh, regions, sources, electric_fields, magnetic_fields, model,
+                                     potential=potential)
 
     def is_trivial(self):
         if not self.boundary_conditions.is_the_same_on_all_boundaries:
