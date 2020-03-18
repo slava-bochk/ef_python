@@ -18,7 +18,7 @@ class Field(SerializableH5):
     @staticmethod
     def import_h5(g):
         from ef.field.expression import FieldExpression
-        from ef.field.on_grid import FieldOnGrid
+        from ef.field.from_csv import FieldFromCSVFile
         from ef.field.uniform import FieldUniform
         ga = g.attrs
         ft = ga['field_type']
@@ -30,13 +30,15 @@ class Field(SerializableH5):
             return FieldExpression(name, 'electric',
                                    *[ga['electric_tinyexpr_field_{}'.format(c)].decode('utf8') for c in 'xyz'])
         elif ft == b'electric_on_regular_grid':
-            return FieldOnGrid(name, 'electric', ga['electric_h5filename'].decode('utf8'))
+            return FieldFromCSVFile(name, 'electric', ga['electric_h5filename'].decode('utf8'))
         elif ft == b'magnetic_uniform':
             return FieldUniform(name, 'magnetic',
                                 np.array([ga['magnetic_uniform_field_{}'.format(c)] for c in 'xyz']).reshape(3))
         elif ft == b'magnetic_tinyexpr':
             return FieldExpression(name, 'magnetic',
                                    *[ga['magnetic_tinyexpr_field_{}'.format(c)].decode('utf8') for c in 'xyz'])
+        elif ft == b'magnetic_on_regular_grid':
+            return FieldFromCSVFile(name, 'magnetic', ga['magnetic_h5filename'].decode('utf8'))
 
 
 class FieldZero(Field):
