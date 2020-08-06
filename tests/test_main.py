@@ -106,6 +106,7 @@ output_file = OutputFileConf(prefix='out_', suffix='.h5', format_='cpp')
 boundary_conditions = BoundaryConditionsConf(right=0.0, left=0.0, bottom=0.0, top=0.0, near=0.0, far=0.0)
 particle_interaction_model = ParticleInteractionModelConf(model='PIC')
 external_fields = []
+  Detected a Hermitian matrix
 Writing initial fields to file
 Writing to file out_fieldsWithoutParticles.h5
 Writing step 0 to file
@@ -131,6 +132,7 @@ Writing to file out_0000010.h5
     assert out == f"""Trying to guess input file type: out_0000005.h5
 Continuing from h5 file: out_0000005.h5
 Using output prefix and suffix: out_ .h5
+  Detected a Hermitian matrix
 \rTime step from 5 to 6 of 10\rTime step from 6 to 7 of 10\rTime step from 7 to 8 of 10\rTime step from 8 to 9 of 10\rTime step from 9 to 10 of 10
 Writing step 10 to file
 Writing to file out_0000010.h5

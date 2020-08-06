@@ -19,7 +19,7 @@ class FieldSolver:
         self.nodes_in_regions, self.potential_in_regions = self.generate_nodes_in_regions(inner_regions)
         nrows = (mesh.n_nodes - 2).prod()
         self.A = self.construct_equation_matrix()
-        self.phi_vec = np.empty(nrows)
+        self.phi_vec = np.zeros(nrows)
         self.rhs = np.empty_like(self.phi_vec)
         self.tolerance = tolerance
         self.max_iter = max_iter
