@@ -26,10 +26,3 @@ def make_injection_config(solver: str = 'amg', backend: str = 'numpy') -> Binder
 
 def configure_application(solver: str = 'amg', backend: str = 'numpy'):
     inject.configure(make_injection_config(solver, backend))
-
-
-@decorator
-def safe_default_inject(foo, *args, **kwargs):
-    if not inject.is_configured():
-        configure_application()
-    return foo(*args, **kwargs)

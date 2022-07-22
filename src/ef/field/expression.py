@@ -6,12 +6,10 @@ import numpy
 from simpleeval import SimpleEval
 
 from ef.field import Field
-from ef.util.inject import safe_default_inject
 
 
 class FieldExpression(Field):
 
-    @safe_default_inject
     @inject.params(xp=numpy)
     def __init__(self, name, electric_or_magnetic, expression_x, expression_y, expression_z, xp=numpy):
         super().__init__(name, electric_or_magnetic)

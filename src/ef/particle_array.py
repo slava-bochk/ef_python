@@ -2,7 +2,6 @@ import inject
 import numpy
 from numpy.core._multiarray_umath import normalize_axis_index
 
-from ef.util.inject import safe_default_inject
 from ef.util.physical_constants import speed_of_light
 from ef.util.serializable_h5 import SerializableH5
 
@@ -10,7 +9,6 @@ from ef.util.serializable_h5 import SerializableH5
 class ParticleArray(SerializableH5):
     xp = inject.attr(numpy)
 
-    @safe_default_inject
     def __init__(self, ids, charge, mass, positions, momentums, momentum_is_half_time_step_shifted=False):
         self.ids = self.xp.asarray(ids)
         self.charge = charge

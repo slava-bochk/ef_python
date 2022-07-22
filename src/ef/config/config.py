@@ -9,7 +9,6 @@ from ef.config.components import *
 from ef.config.section import ConfigSection
 from ef.util.array_on_grid import ArrayOnGrid
 from ef.util.data_class import DataClass
-from ef.util.inject import safe_default_inject
 
 
 class Config(DataClass):
@@ -105,9 +104,8 @@ class Config(DataClass):
         self.export_to_file(iostr)
         return iostr.getvalue()
 
-    @safe_default_inject
     @inject.params(array_class=ArrayOnGrid)
-    def make(self, array_class: Type[ArrayOnGrid]):
+    def make(self, array_class: Type[ArrayOnGrid] = ArrayOnGrid):
         grid = self.time_grid.make()
         mesh = self.spatial_mesh.make()
         potential = array_class(mesh)
