@@ -12,7 +12,7 @@ from ef.util.testing import assert_dataclass_eq
 @pytest.fixture
 def hdf5_temp():
     buffer = io.BytesIO()
-    with h5py.File(buffer) as f:
+    with h5py.File(buffer, 'w') as f:
         yield f
 
 
