@@ -114,7 +114,7 @@ class Box(Shape):
             g.attrs['y_top'] = self.origin[1] + self.size[1]
             g.attrs['z_near'] = self.origin[2]
             g.attrs['z_far'] = self.origin[2] + self.size[2]
-            g.attrs['object_type'] = np.string_(b"box\x00")
+            g.attrs['object_type'] = np.string_(b"box")
         else:
             g.attrs['box_x_right'] = self.origin[0]
             g.attrs['box_x_left'] = self.origin[0] + self.size[0]
@@ -122,7 +122,7 @@ class Box(Shape):
             g.attrs['box_y_top'] = self.origin[1] + self.size[1]
             g.attrs['box_z_near'] = self.origin[2]
             g.attrs['box_z_far'] = self.origin[2] + self.size[2]
-            g.attrs['geometry_type'] = np.string_(b"box\x00")
+            g.attrs['geometry_type'] = np.string_(b"box")
 
 
 class Cylinder(Shape):
@@ -167,13 +167,13 @@ class Cylinder(Shape):
             for i, c in enumerate('xyz'):
                 g.attrs['axis_start_{}'.format(c)] = self.start[i]
                 g.attrs['axis_end_{}'.format(c)] = self.end[i]
-            g.attrs['object_type'] = np.string_(b"cylinder\x00")
+            g.attrs['object_type'] = np.string_(b"cylinder")
         else:
             g.attrs['cylinder_radius'] = self.radius
             for i, c in enumerate('xyz'):
                 g.attrs['cylinder_axis_start_{}'.format(c)] = self.start[i]
                 g.attrs['cylinder_axis_end_{}'.format(c)] = self.end[i]
-            g.attrs['geometry_type'] = np.string_(b"cylinder\x00")
+            g.attrs['geometry_type'] = np.string_(b"cylinder")
 
 
 class Tube(Shape):
@@ -219,7 +219,7 @@ class Tube(Shape):
             for i, c in enumerate('xyz'):
                 g.attrs['axis_start_{}'.format(c)] = self.start[i]
                 g.attrs['axis_end_{}'.format(c)] = self.end[i]
-            g.attrs['object_type'] = np.string_(b"tube\x00")
+            g.attrs['object_type'] = np.string_(b"tube")
         else:
             if np.any((self.start != self.end)[:2]):
                 raise ValueError('Cannot export tube particle source not along z-axis')
@@ -229,7 +229,7 @@ class Tube(Shape):
             g.attrs['tube_along_z_axis_y'] = self.start[1]
             g.attrs['tube_along_z_axis_start_z'] = self.start[2]
             g.attrs['tube_along_z_axis_end_z'] = self.end[2]
-            g.attrs['geometry_type'] = np.string_(b"tube_along_z\x00")
+            g.attrs['geometry_type'] = np.string_(b"tube_along_z")
 
 
 class Sphere(Shape):
@@ -259,7 +259,7 @@ class Sphere(Shape):
             g.attrs['radius'] = self.radius
             for i, c in enumerate('xyz'):
                 g.attrs['origin_{}'.format(c)] = self.origin[i]
-            g.attrs['object_type'] = np.string_(b"sphere\x00")
+            g.attrs['object_type'] = np.string_(b"sphere")
         else:
             raise ValueError('Cannot export spherical particle source')
 

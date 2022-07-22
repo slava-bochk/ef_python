@@ -54,12 +54,12 @@ class OutputWriterCpp(OutputWriterNumberedH5):
                 ft = 'electric_tinyexpr'
                 for i, c in enumerate('xyz'):
                     expr = getattr(s, f'expression_{c}')
-                    expr = np.string_(expr.encode('utf8')) + b'\x00'
+                    expr = np.string_(expr.encode('utf8'))
                     sg.attrs[f'electric_tinyexpr_field_{c}'] = expr
             elif s.__class__ is FieldFromCSVFile:
                 ft = 'electric_on_regular_grid'
-                sg.attrs['electric_h5filename'] = np.string_(s.field_filename.encode('utf8') + b'\x00')
-            sg.attrs['field_type'] = np.string_(ft.encode('utf8') + b'\x00')
+                sg.attrs['electric_h5filename'] = np.string_(s.field_filename.encode('utf8'))
+            sg.attrs['field_type'] = np.string_(ft.encode('utf8'))
 
         if sim.magnetic_fields.__class__.__name__ == "FieldZero":
             ff = []
@@ -80,13 +80,13 @@ class OutputWriterCpp(OutputWriterNumberedH5):
                 sg.attrs['speed_of_light'] = speed_of_light
                 for i, c in enumerate('xyz'):
                     expr = getattr(s, f'expression_{c}')
-                    expr = np.string_(expr.encode('utf8')) + b'\x00'
+                    expr = np.string_(expr.encode('utf8'))
                     sg.attrs[f'magnetic_tinyexpr_field_{c}'] = expr
             elif s.__class__ is FieldFromCSVFile:
                 ft = 'magnetic_on_regular_grid'
-                sg.attrs['magnetic_h5filename'] = np.string_(s.field_filename.encode('utf8') + b'\x00')
-            sg.attrs['field_type'] = np.string_(ft.encode('utf8') + b'\x00')
+                sg.attrs['magnetic_h5filename'] = np.string_(s.field_filename.encode('utf8'))
+            sg.attrs['field_type'] = np.string_(ft.encode('utf8'))
 
         g = h5file.create_group('ParticleInteractionModel')
         g.attrs['particle_interaction_model'] = \
-            np.string_(sim.particle_interaction_model.name.encode('utf8') + b'\x00')
+            np.string_(sim.particle_interaction_model.name.encode('utf8'))
