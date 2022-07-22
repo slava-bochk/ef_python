@@ -22,7 +22,7 @@ class TestFields:
         with raises(NotImplementedError):
             f.get_at_points(f.get_at_points([(1, 2, 3)], 0.), [(3.14, 2.7, -0.5)])
 
-    def test_sum(self):
+    def test_sum(self, backend):
         f = FieldSum.factory([FieldUniform('u1', 'electric', np.array((3.14, 2.7, -0.5)))])
         assert type(f) is FieldUniform
         assert_array_equal(f.get_at_points([(1, 2, 3)], 0.), (3.14, 2.7, -0.5))
@@ -57,7 +57,7 @@ class TestFields:
         assert_array_almost_equal(f.get_at_points([(1, 2, 3)], 5.), [(7.14, 1.7, 6.5)])
         assert_array_almost_equal(f.get_at_points([(3, 2, 1)], 5.), [(7.14, 7.7, 4.5)])
 
-    def test_uniform(self):
+    def test_uniform(self, backend):
         f = FieldUniform('u1', 'electric', np.array((3.14, 2.7, -0.5)))
         assert_array_equal(f.get_at_points((1, 2, 3), 0.), (3.14, 2.7, -0.5))
         assert_array_equal(f.get_at_points((1, 2, 3), 5.), (3.14, 2.7, -0.5))

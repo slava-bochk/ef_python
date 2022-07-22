@@ -49,7 +49,7 @@ class OutputWriterCpp(OutputWriterNumberedH5):
             if s.__class__ is FieldUniform:
                 ft = 'electric_uniform'
                 for i, c in enumerate('xyz'):
-                    sg.attrs[f'electric_uniform_field_{c}'] = s.uniform_field_vector[i]
+                    sg.attrs[f'electric_uniform_field_{c}'] = s.dict['uniform_field_vector'][i]
             elif s.__class__ is FieldExpression:
                 ft = 'electric_tinyexpr'
                 for i, c in enumerate('xyz'):
@@ -74,7 +74,7 @@ class OutputWriterCpp(OutputWriterNumberedH5):
                 ft = 'magnetic_uniform'
                 sg.attrs['speed_of_light'] = speed_of_light
                 for i, c in enumerate('xyz'):
-                    sg.attrs[f'magnetic_uniform_field_{c}'] = s.uniform_field_vector[i]
+                    sg.attrs[f'magnetic_uniform_field_{c}'] = s.dict['uniform_field_vector'][i]
             elif s.__class__ is FieldExpression:
                 ft = 'magnetic_tinyexpr'
                 sg.attrs['speed_of_light'] = speed_of_light
