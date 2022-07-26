@@ -1,5 +1,6 @@
-import io
 from configparser import ConfigParser
+import io
+import os
 from typing import Type
 
 import inject
@@ -51,9 +52,8 @@ class Config(DataClass):
 
     @classmethod
     def from_fname(cls, fname):
-        parser = ConfigParser()
-        parser.read(fname)
-        return cls.from_configparser(parser)
+        with open(fname, 'r') as fin:
+            return cls.from_file(fin)
 
     @classmethod
     def from_file(cls, file):
