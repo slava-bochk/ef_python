@@ -1,11 +1,11 @@
 import numpy
 
 from ef.field.solvers import FieldSolver
+import pyamgx
 
 
 class FieldSolverPyamgx(FieldSolver):
     def __del__(self):
-        import pyamgx
         self._solver.destroy()
         self._rhs.destroy()
         self._phi_vec.destroy()
@@ -16,7 +16,6 @@ class FieldSolverPyamgx(FieldSolver):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        import pyamgx
         pyamgx.initialize()
         self.cfg = pyamgx.Config()
         conf_string = f"""{{

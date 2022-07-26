@@ -1,13 +1,10 @@
 import inject
 import numpy
 import pytest
-from numpy.testing import assert_array_equal, assert_array_almost_equal
 
 from ef.field.solvers import FieldSolver
 from ef.field.solvers.pyamg import FieldSolverPyamg
-from ef.field.solvers.pyamgx import FieldSolverPyamgx
 from ef.util.array_on_grid import ArrayOnGrid
-from ef.util.array_on_grid_cupy import ArrayOnGridCupy
 
 @pytest.fixture(params=['numpy', pytest.param('cupy', marks=pytest.mark.cupy)], ids=['np', 'cp'])
 def _backend(request):
@@ -19,6 +16,7 @@ def _backend(request):
             binder.bind(numpy, numpy)
         elif xp == 'cupy':
             import cupy
+            from ef.util.array_on_grid_cupy import ArrayOnGridCupy
             binder.bind(ArrayOnGrid, ArrayOnGridCupy)
             binder.bind(numpy, cupy)
     return conf
@@ -32,6 +30,7 @@ def _solver(request):
         if s == 'amg':
             binder.bind(FieldSolver, FieldSolverPyamg)
         elif s == 'amgx':
+            from ef.field.solvers.pyamgx import FieldSolverPyamgx
             binder.bind(FieldSolver, FieldSolverPyamgx)
     return conf
 

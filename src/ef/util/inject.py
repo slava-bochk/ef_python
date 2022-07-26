@@ -1,20 +1,22 @@
 import inject
 import numpy
-from decorator import decorator
 from inject import Binder, BinderCallable
 
 from ef.field.solvers import FieldSolver
 from ef.field.solvers.pyamg import FieldSolverPyamg
-from ef.field.solvers.pyamgx import FieldSolverPyamgx
 from ef.util.array_on_grid import ArrayOnGrid
-from ef.util.array_on_grid_cupy import ArrayOnGridCupy
 
 
 def make_injection_config(solver: str = 'amg', backend: str = 'numpy') -> BinderCallable:
     def conf(binder: Binder) -> None:
-        binder.bind(FieldSolver, FieldSolverPyamgx if solver == 'amgx' else FieldSolverPyamg)
+        if solver == 'amgx':
+            from ef.field.solvers.pyamgx import FieldSolverPyamgx
+            binder.bind(FieldSolver, FieldSolverPyamgx)
+        else:
+            binder.bind(FieldSolver, FieldSolverPyamg)
         if backend == 'cupy':
             import cupy
+            from ef.util.array_on_grid_cupy import ArrayOnGridCupy
             binder.bind(ArrayOnGrid, ArrayOnGridCupy)
             binder.bind(numpy, cupy)
         else:

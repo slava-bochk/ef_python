@@ -5,10 +5,7 @@ import numpy
 
 from ef.util.array_on_grid import ArrayOnGrid
 
-try:
-    import cupy, cupyx
-except ImportError:
-    pass  # Just don't try to actually use it
+import cupy, cupyx
 
 
 class ArrayOnGridCupy(ArrayOnGrid):
